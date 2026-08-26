@@ -184,8 +184,9 @@ export class DzpkRoomSelectionController extends Component {
       requireDzpkRuntimeServices();
     if (this.roomEntryPending) return;
     gameContext.roomLevel = selectedRoomLevel;
-    const selectedRoomConfiguration = gameContext.roomConfig[String(selectedRoomLevel)]
-      as RoomConfiguration | undefined;
+    const selectedRoomConfiguration = gameContext.roomConfig[
+      String(selectedRoomLevel)
+    ] as RoomConfiguration | undefined;
     if (!selectedRoomConfiguration) {
       uiMessageService.showTips('游戏配置错误，请重新进入游戏！');
       return;

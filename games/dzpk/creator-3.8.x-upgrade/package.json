@@ -1,5 +1,10 @@
 {
   "name": "kg-dzpk-creator-3-8-upgrade",
-  "version": "0.1.0",
+  "type": "2d",
+  "uuid": "f64eb76d-6be5-4574-9316-1ef188688db4",
+  "version": "3.8.8",
+  "creator": {
+    "version": "3.8.8"
+  },
   "private": true
 }

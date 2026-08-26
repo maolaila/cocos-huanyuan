@@ -17,9 +17,14 @@ KG Cocos client gameId / PHP gtype：`19`
 
 ### `creator-3.8.x-upgrade`
 
-迁移已开始。当前完成 Creator 3.8.8 工程骨架、权威资源输入、基础 TypeScript、
-Load/Room 与序列化组件桥，正在等待首次人工 Creator 3.8.8 导入保存；牌桌行为尚未迁移，
-不能称为可运行 3.8.x 工程。
+迁移已开始。Creator 3.8.8 工程骨架、基础 TypeScript 和语义组件输入已建立；首次人工
+检查证明直接复制的 2.4 `.fire/.prefab` 不能被 3.8 正确反序列化，现已撤销该导入检查点，
+改用官方 **Import Cocos Creator 2.x Project** 工作流重新生成序列化。当前状态为
+`OfficialImporterOutputCapturedAwaitingScriptReplacementAndSerializationAudit`：workbench 已显示
+“导入完毕”，但 importer 生成脚本仍有旧转译 helper/CommonJS/模块解析错误，不能称为可运行或
+原版一致的 3.8.x 工程。
+
+端到端过程和踩坑实例见 `docs/process-journal.md`。
 
 ## 共同边界
 
