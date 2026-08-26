@@ -9,6 +9,8 @@
 /build/
 /profiles/
 /native/engine/android/**/*/assets
+/settings/v2/packages/cocos-service.json
+/settings/v2/packages/information.json
 
 #//////////////////////////
 # NPM
