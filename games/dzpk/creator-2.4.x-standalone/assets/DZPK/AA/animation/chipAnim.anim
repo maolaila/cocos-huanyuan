@@ -1,0 +1,76 @@
+{
+  "__type__": "cc.AnimationClip",
+  "_name": "chipAnim",
+  "_duration": 0.75,
+  "speed": 1.5,
+  "curveData": {
+    "props": {
+      "position": [
+        {
+          "frame": 0,
+          "value": [
+            -2.611,
+            60,
+            0
+          ]
+        },
+        {
+          "frame": 0.25,
+          "value": [
+            -2.611,
+            0,
+            0
+          ]
+        },
+        {
+          "frame": 0.3333333333333333,
+          "value": [
+            -2.611,
+            0,
+            0
+          ]
+        }
+      ],
+      "angle": [
+        {
+          "frame": 0,
+          "value": 70
+        },
+        {
+          "frame": 0.3333333333333333,
+          "value": -35
+        },
+        {
+          "frame": 0.4166666666666667,
+          "value": 20
+        },
+        {
+          "frame": 0.5,
+          "value": -15
+        },
+        {
+          "frame": 0.5833333333333334,
+          "value": 0
+        },
+        {
+          "frame": 0.6666666666666666,
+          "value": 5
+        },
+        {
+          "frame": 0.75,
+          "value": 0
+        }
+      ],
+      "opacity": [
+        {
+          "frame": 0,
+          "value": 0
+        },
+        {
+          "frame": 0.25,
+          "value": 255
+        }
+      ]
+    }
+  }
+}

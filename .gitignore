@@ -1,0 +1,8 @@
+# The original per-project checkout is retained locally as a recoverable source
+# workspace. Canonical repository content lives under games/.
+/kg-dzpk-2.4.7-original/
+
+# Local import archives and editor artifacts must never enter the catalog repo.
+*.tar
+Thumbs.db
+.DS_Store

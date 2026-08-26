@@ -1,0 +1,19 @@
+# Preserve byte-identical authority resources and their original line endings.
+assets/DZPK/** -text
+assets/BJL/** -text
+assets/resources/** -text
+assets/DZPK/** whitespace=-trailing-space,-blank-at-eof
+assets/BJL/** whitespace=-trailing-space,-blank-at-eof
+assets/resources/** whitespace=-trailing-space,-blank-at-eof
+assets/DZPK/**/*.fnt whitespace=-trailing-space,-blank-at-eof
+assets/DZPK/**/*.plist whitespace=-trailing-space,-blank-at-eof
+assets/BJL/**/*.plist whitespace=-trailing-space,-blank-at-eof
+creator.d.ts whitespace=-trailing-space,-blank-at-eof
+assets/Scene.meta whitespace=-blank-at-eof
+assets/Scene/** whitespace=-blank-at-eof
+assets/Standalone.meta whitespace=-blank-at-eof
+assets/Standalone/** whitespace=-blank-at-eof
+docs/*.md whitespace=-trailing-space
+project.json whitespace=-blank-at-eof
+scripts/** whitespace=-blank-at-eof
+settings/** whitespace=-blank-at-eof

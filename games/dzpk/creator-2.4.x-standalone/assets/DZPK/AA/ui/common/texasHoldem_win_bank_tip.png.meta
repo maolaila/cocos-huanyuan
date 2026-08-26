@@ -1,0 +1,38 @@
+{
+  "ver": "2.3.7",
+  "uuid": "4008b9b5-0fd2-42d3-ae8b-f2062104ef41",
+  "importer": "texture",
+  "type": "sprite",
+  "wrapMode": "clamp",
+  "filterMode": "bilinear",
+  "premultiplyAlpha": false,
+  "genMipmaps": false,
+  "packable": true,
+  "width": 100,
+  "height": 68,
+  "platformSettings": {},
+  "subMetas": {
+    "texasHoldem_win_bank_tip": {
+      "ver": "1.0.6",
+      "uuid": "ae6a676e-4e6b-4aa1-a69c-cd1311567875",
+      "importer": "sprite-frame",
+      "rawTextureUuid": "4008b9b5-0fd2-42d3-ae8b-f2062104ef41",
+      "trimType": "auto",
+      "trimThreshold": 1,
+      "rotated": false,
+      "offsetX": 0,
+      "offsetY": 0,
+      "trimX": 0,
+      "trimY": 0,
+      "width": 100,
+      "height": 68,
+      "rawWidth": 100,
+      "rawHeight": 68,
+      "borderTop": 0,
+      "borderBottom": 0,
+      "borderLeft": 0,
+      "borderRight": 0,
+      "subMetas": {}
+    }
+  }
+}

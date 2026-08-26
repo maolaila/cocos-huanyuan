@@ -1,0 +1,38 @@
+{
+  "ver": "2.3.7",
+  "uuid": "c1448d5f-311a-49fc-a9a6-8cfa63baf4f1",
+  "importer": "texture",
+  "type": "sprite",
+  "wrapMode": "clamp",
+  "filterMode": "bilinear",
+  "premultiplyAlpha": false,
+  "genMipmaps": false,
+  "packable": true,
+  "width": 96,
+  "height": 130,
+  "platformSettings": {},
+  "subMetas": {
+    "texasHoldem_battle_puke_bg": {
+      "ver": "1.0.6",
+      "uuid": "17983b4d-59a3-40d0-ae07-1d613d479b3b",
+      "importer": "sprite-frame",
+      "rawTextureUuid": "c1448d5f-311a-49fc-a9a6-8cfa63baf4f1",
+      "trimType": "auto",
+      "trimThreshold": 1,
+      "rotated": false,
+      "offsetX": 0,
+      "offsetY": 0,
+      "trimX": 0,
+      "trimY": 0,
+      "width": 96,
+      "height": 130,
+      "rawWidth": 96,
+      "rawHeight": 130,
+      "borderTop": 0,
+      "borderBottom": 0,
+      "borderLeft": 0,
+      "borderRight": 0,
+      "subMetas": {}
+    }
+  }
+}

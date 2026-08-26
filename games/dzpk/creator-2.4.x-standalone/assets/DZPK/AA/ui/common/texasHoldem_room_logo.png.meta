@@ -1,0 +1,38 @@
+{
+  "ver": "2.3.7",
+  "uuid": "977dc89a-6092-44e9-9f5e-acaee272d036",
+  "importer": "texture",
+  "type": "sprite",
+  "wrapMode": "clamp",
+  "filterMode": "bilinear",
+  "premultiplyAlpha": false,
+  "genMipmaps": false,
+  "packable": true,
+  "width": 257,
+  "height": 139,
+  "platformSettings": {},
+  "subMetas": {
+    "texasHoldem_room_logo": {
+      "ver": "1.0.6",
+      "uuid": "560b974c-5762-47c6-9844-5b636d5ca93a",
+      "importer": "sprite-frame",
+      "rawTextureUuid": "977dc89a-6092-44e9-9f5e-acaee272d036",
+      "trimType": "auto",
+      "trimThreshold": 1,
+      "rotated": false,
+      "offsetX": 0,
+      "offsetY": 0,
+      "trimX": 0,
+      "trimY": 0,
+      "width": 257,
+      "height": 139,
+      "rawWidth": 257,
+      "rawHeight": 139,
+      "borderTop": 0,
+      "borderBottom": 0,
+      "borderLeft": 0,
+      "borderRight": 0,
+      "subMetas": {}
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "ver": "2.3.7",
+  "uuid": "1b6b1832-7881-45c4-9509-154b40477f08",
+  "importer": "texture",
+  "type": "sprite",
+  "wrapMode": "clamp",
+  "filterMode": "bilinear",
+  "premultiplyAlpha": false,
+  "genMipmaps": false,
+  "packable": true,
+  "width": 68,
+  "height": 68,
+  "platformSettings": {},
+  "subMetas": {
+    "Dzpk_Room_Table_Head_Bg_Girl": {
+      "ver": "1.0.6",
+      "uuid": "d962d7a8-a036-4ffb-a408-b6508197a181",
+      "importer": "sprite-frame",
+      "rawTextureUuid": "1b6b1832-7881-45c4-9509-154b40477f08",
+      "trimType": "auto",
+      "trimThreshold": 1,
+      "rotated": false,
+      "offsetX": 0,
+      "offsetY": 0,
+      "trimX": 0,
+      "trimY": 0,
+      "width": 68,
+      "height": 68,
+      "rawWidth": 68,
+      "rawHeight": 68,
+      "borderTop": 0,
+      "borderBottom": 0,
+      "borderLeft": 0,
+      "borderRight": 0,
+      "subMetas": {}
+    }
+  }
+}

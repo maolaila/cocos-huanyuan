@@ -1,0 +1,73 @@
+{
+  "verdict": "Passed",
+  "mode": "full",
+  "manifestId": "dzpk-phase-a-acceptance-v1",
+  "sourceMathVersion": "dzpk-source-083cff524afb5aa5",
+  "fiveCard": {
+    "combinations": 2598960,
+    "categoryCounts": {
+      "1": 1302540,
+      "2": 1098240,
+      "3": 123552,
+      "4": 54912,
+      "5": 10200,
+      "6": 5108,
+      "7": 3744,
+      "8": 624,
+      "9": 36,
+      "10": 4
+    }
+  },
+  "sevenCard": {
+    "samples": 1000000,
+    "mismatches": 0
+  },
+  "botSoak": {
+    "hands": 50000,
+    "playerActions": 1150532,
+    "lifecycleTransitions": 149818,
+    "uniqueDeals": 50000,
+    "actionCounts": {
+      "FOLD": 14026,
+      "CHECK": 639550,
+      "CALL": 398219,
+      "RAISE": 88446,
+      "ALL_IN": 10291
+    }
+  },
+  "controlConfidence95": {
+    "OFF": {
+      "hands": 1000,
+      "averageNet": -25131.547,
+      "lower95": -65980.55603581591,
+      "upper95": 15717.462035815915
+    },
+    "POSITIVE": {
+      "hands": 1000,
+      "averageNet": 1067491.407,
+      "lower95": 1009326.3219669504,
+      "upper95": 1125656.4920330495
+    },
+    "NEGATIVE": {
+      "hands": 1000,
+      "averageNet": -279549.398,
+      "lower95": -291948.8983344654,
+      "upper95": -267149.8976655346
+    }
+  },
+  "isolation": {
+    "offIgnoresTargetSelection": true,
+    "secondHumanAdmission": "MULTI_HUMAN_NOT_ENABLED"
+  },
+  "targetStop": {
+    "positiveStopped": true,
+    "negativeStopped": true,
+    "nextDealDirection": "OFF"
+  },
+  "lifecycle": {
+    "phaseCount": 13,
+    "everyPhaseRestored": true,
+    "settledToWaitingRestored": true
+  },
+  "evidenceRecordedAt": "2026-08-25T21:06:01+09:00"
+}

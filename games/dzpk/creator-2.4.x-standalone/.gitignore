@@ -1,0 +1,13 @@
+/library/
+/local/
+/temp/
+/build/
+/.vscode/
+/.idea/
+/.playwright-cli/
+/output/document-assets/
+/output/docx-render*/
+/output/logs/
+/settings/services.json
+~$*.docx
+*.log
