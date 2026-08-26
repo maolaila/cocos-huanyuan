@@ -1,6 +1,6 @@
 # Creator 2.4.x serialization recovery
 
-Status: `OfficialImporterOutputCapturedAwaitingIntegration`
+Status: `OfficialImporterOutputIntegratedAwaitingHumanSerializationReview`
 
 ## Failure
 
@@ -55,3 +55,17 @@ to obtain authoritative Creator-generated 3.x serialization output.
   serialized property and click-handler identity.
 - The original `1334 x 750` Canvas resolution will be reconciled with 3.8 project settings instead of
   modifying the imported layout node-by-node.
+
+## Canonical integration
+
+- Integrated the official `DzpkStandaloneBoot.scene`, six Prefabs, converted animations/plists,
+  resources, audio and their 3.x metadata into the canonical project.
+- Excluded workbench `_script`, `_semantic` and `Standalone` generated code.
+- Kept maintained TypeScript with the same 11 serialized component UUIDs.
+- Static source/importer node counts match for every Prefab: Bank 39, DZPKMain 321, Load 4,
+  Room 58, Rule 11 and Set 58; the imported Boot Scene has 8 nodes.
+- The official Room Prefab still contains three serialized `RoomChoose` components and their `img1`
+  arrays. The previous warning must be rechecked only after maintained TypeScript registration.
+- Added the original `1334 x 750`, fit-width and fit-height values to 3.8 project settings.
+- Current boundary: no compilation or runtime claim; the canonical project now awaits human Creator
+  Scene/Prefab opening and Inspector review.

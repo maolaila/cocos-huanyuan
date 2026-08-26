@@ -1,5 +1,5 @@
 {
-  "schema": "dzpk-creator-3.8-migration-baseline-v1",
+  "schema": "dzpk-creator-3.8-migration-baseline-v2",
   "targetCreatorVersion": "3.8.8",
   "sourceCreatorVersion": "2.4.7",
   "sourceRepositoryCommit": "70421d877e6866607aff232c686fb7946d42e50a",
@@ -14,7 +14,25 @@
     { "name": "Rule", "bytes": 10839, "sha256": "7e4366a86d0c65683506540d453934be0e6107b46bef31c4aeab07dc3e4a7291", "runtime": "Required" },
     { "name": "Set", "bytes": 58175, "sha256": "962f2e69dab8a9bb89c4c6d0e559d0fd20b44e43368249f9f047dce2d9b01191", "runtime": "Required" }
   ],
+  "officialImporterOutput": {
+    "creatorVersion": "3.8.8",
+    "sourceProject": "games/dzpk/creator-2.4.x-standalone",
+    "workbench": "C:/works/dzpk-creator38-official-import-workbench",
+    "humanImportResult": "IMPORT_COMPLETED_WITH_SCRIPT_MIGRATION_ERRORS",
+    "serializedAssets": [
+      { "name": "Bank", "nodes": 39, "bytes": 92993, "sha256": "d2b013572b2f1d045b449a90b930640f4b447391178ea037a8a86dd98c050ca0" },
+      { "name": "DZPKMain", "nodes": 321, "bytes": 764210, "sha256": "a195b0bd774b1fddd62240107f4461c5602c768299d720ef631e8c7ae1b3e054" },
+      { "name": "Load", "nodes": 4, "bytes": 8403, "sha256": "637fc5a55e12653f2c2ac338b2c256114cd6597000e7b0fac8944da5d1956d0a" },
+      { "name": "Room", "nodes": 58, "bytes": 135582, "sha256": "c1863129d037fd5aea23e29c9c415154bf63df50cab8cd4b0491e499c8bf9410" },
+      { "name": "Rule", "nodes": 11, "bytes": 27483, "sha256": "397372cbf1ce917b14b7206d3b2583b527a7d7b9be1fb0bb5c3dbee463bc49ee" },
+      { "name": "Set", "nodes": 58, "bytes": 136480, "sha256": "f1a53a2865a6d265d2683c9c4a0187c4b937d9ac942de9248afe98d3c0b1654d" },
+      { "name": "DzpkStandaloneBoot", "nodes": 8, "bytes": 15512, "sha256": "d3dba7130fcb3673b6eab3893b5081f1e3fc15abca9cbeb773a8635a4581a8f9" }
+    ],
+    "nodeCountParity": "MATCHED_STATIC_COUNT",
+    "customSerializedTypeCount": 11,
+    "scriptPolicy": "REPLACE_IMPORTED_TRANSPILED_OUTPUT_WITH_MAINTAINED_TYPESCRIPT_UNDER_ORIGINAL_UUID"
+  },
   "moneyBoundary": "TRIAL_ONLY",
   "multiplayerBoundary": "ONE_AUTHENTICATED_HUMAN_PLUS_FIVE_SERVER_BOTS",
-  "verification": "PENDING_HUMAN_CREATOR_3_8_REVIEW"
+  "verification": "PENDING_HUMAN_CANONICAL_PROJECT_SERIALIZATION_REVIEW"
 }

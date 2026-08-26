@@ -1,9 +1,13 @@
 {
-  "ver": "1.3.2",
-  "uuid": "1eb86003-fa02-4609-b85f-317c3ed33efc",
+  "ver": "1.1.50",
   "importer": "prefab",
-  "optimizationPolicy": "AUTO",
-  "asyncLoadAssets": false,
-  "readonly": false,
-  "subMetas": {}
+  "imported": true,
+  "uuid": "1eb86003-fa02-4609-b85f-317c3ed33efc",
+  "files": [
+    ".json"
+  ],
+  "subMetas": {},
+  "userData": {
+    "syncNodeName": "Rule"
+  }
 }

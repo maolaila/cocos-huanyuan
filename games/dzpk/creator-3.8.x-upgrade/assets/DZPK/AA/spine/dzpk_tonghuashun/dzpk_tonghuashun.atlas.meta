@@ -1,6 +1,12 @@
 {
-  "ver": "1.0.3",
+  "ver": "1.0.0",
+  "importer": "*",
+  "imported": true,
   "uuid": "abbcd21b-e8d8-45c1-9ec7-277074ccbab5",
-  "importer": "asset",
-  "subMetas": {}
+  "files": [
+    ".atlas",
+    ".json"
+  ],
+  "subMetas": {},
+  "userData": {}
 }

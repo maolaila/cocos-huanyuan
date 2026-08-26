@@ -24,7 +24,7 @@
 | `cc.game.EVENT_HIDE/SHOW` | `Game.EVENT_HIDE/SHOW` | Boot 生命周期迁移 |
 | `cc.view` | `view` | 保持 1334×750 SHOW_ALL |
 | `sp.Skeleton` | `sp.Skeleton` 显式 import | 保持 Spine 资源/动画名 |
-| 2.4 `.fire/.prefab` | 3.8 scene/prefab importer | 用户首次打开时由 Creator 3.8.8 升级，结果再冻结 |
+| 2.4 `.fire/.prefab` | 官方 `plugin-import-2x` 输出 `.scene/.prefab` | 干净 workbench 导入后审计并集成；禁止直接复制 |
 
 ## 分层迁移状态
 
@@ -38,5 +38,5 @@
 | Table Model | ImplementedStatic | viewer-safe 纯状态已迁移 |
 | Table Controller/Presentation | SerializedBridgeOnly | handler/字段存在，行为待 Checkpoint 02 |
 | Rule/Set/shared components | ImplementedStatic | Popup、Toggle、PageView、DropDown、AdaptView |
-| 3.8 序列化输出 | ReadyForHumanEditor | 首次 Creator 3.8.8 打开后冻结 |
+| 3.8 序列化输出 | IntegratedStaticAwaitingHumanEditor | 官方输出已集成；6 个 Prefab 节点数与 2.4 输入静态一致 |
 | 可运行结论 | PendingHumanReview | 不得提前宣称 |

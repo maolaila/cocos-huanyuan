@@ -1,9 +1,13 @@
 {
-  "ver": "1.3.2",
-  "uuid": "faea1885-c01d-4a4b-8d14-69319aef5c50",
+  "ver": "1.1.50",
   "importer": "prefab",
-  "optimizationPolicy": "AUTO",
-  "asyncLoadAssets": false,
-  "readonly": false,
-  "subMetas": {}
+  "imported": true,
+  "uuid": "faea1885-c01d-4a4b-8d14-69319aef5c50",
+  "files": [
+    ".json"
+  ],
+  "subMetas": {},
+  "userData": {
+    "syncNodeName": "DZPKMain"
+  }
 }

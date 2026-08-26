@@ -1,8 +1,14 @@
 {
-  "ver": "2.0.3",
-  "uuid": "e248d964-272c-40be-8b14-93fe3562e0a9",
+  "ver": "1.0.0",
   "importer": "audio-clip",
-  "downloadMode": 0,
-  "duration": 0.444082,
-  "subMetas": {}
+  "imported": true,
+  "uuid": "e248d964-272c-40be-8b14-93fe3562e0a9",
+  "files": [
+    ".json",
+    ".mp3"
+  ],
+  "subMetas": {},
+  "userData": {
+    "downloadMode": 0
+  }
 }

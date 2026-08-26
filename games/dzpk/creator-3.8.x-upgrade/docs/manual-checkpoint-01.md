@@ -1,6 +1,6 @@
 # Manual Checkpoint 01 — 工程导入与序列化
 
-Status：`OfficialImporterOutputCapturedAwaitingScriptReplacementAndSerializationAudit`
+Status：`SupersededByManualCheckpoint02`
 
 请使用 Creator 3.8.8：
 

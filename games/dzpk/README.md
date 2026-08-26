@@ -21,8 +21,9 @@ KG Cocos client gameId / PHP gtype：`19`
 检查证明直接复制的 2.4 `.fire/.prefab` 不能被 3.8 正确反序列化，现已撤销该导入检查点，
 改用官方 **Import Cocos Creator 2.x Project** 工作流重新生成序列化。当前状态为
 `OfficialImporterOutputCapturedAwaitingScriptReplacementAndSerializationAudit`：workbench 已显示
-“导入完毕”，但 importer 生成脚本仍有旧转译 helper/CommonJS/模块解析错误，不能称为可运行或
-原版一致的 3.8.x 工程。
+“导入完毕”。正式工程已集成官方 Scene/Prefab/resource/meta，并排除旧转译
+helper/CommonJS 脚本，当前等待人工打开正式工程核对序列化和组件绑定；不能称为可运行或原版
+一致的 3.8.x 工程。
 
 端到端过程和踩坑实例见 `docs/process-journal.md`。
 

@@ -1,9 +1,13 @@
 {
-  "ver": "1.3.2",
-  "uuid": "efa3b3c7-d745-4874-b161-ae25276fb74a",
+  "ver": "1.1.50",
   "importer": "prefab",
-  "optimizationPolicy": "AUTO",
-  "asyncLoadAssets": false,
-  "readonly": false,
-  "subMetas": {}
+  "imported": true,
+  "uuid": "efa3b3c7-d745-4874-b161-ae25276fb74a",
+  "files": [
+    ".json"
+  ],
+  "subMetas": {},
+  "userData": {
+    "syncNodeName": "Room"
+  }
 }

@@ -4,7 +4,7 @@
 - KG gameId / gtype：`119 / 19`
 - 执行模式：`HUMAN_CHECKPOINTS`
 - 活标准：`kg-cocos-restoration-to-gamehub-v1`
-- 当前阶段：官方 importer 输出审计与维护版 TypeScript 替换
+- 当前阶段：正式 3.8 工程序列化人工复核
 - 当前结论：2.4 基线已冻结；3.8 parity 未通过；完整 GameHub/商户交付未完成
 
 本日志记录真实决策、失败和恢复点。较新的失败会撤销受影响的旧检查点，但不会抹去仍然正确的
@@ -37,9 +37,11 @@
 - 旧 JavaScript 放在 `migration-source`，不作为 3.8 runtime；
 - 直接复制的 2.4 Scene/Prefab 方案已被人工检查否决；
 - 干净 workbench 已显示“导入完毕”，并生成 `DzpkStandaloneBoot.scene` 与 3.x 资源序列化；
-- 当前 gate：`OfficialImporterOutputCapturedAwaitingScriptReplacementAndSerializationAudit`；
-- 下一步：冻结官方 Scene/Prefab/meta 输出，以维护版 3.8 TypeScript 按原 UUID 替换机械转换脚本，
-  再审计六个 Prefab、RoomChoose 绑定和原 `1334 x 750` 设计分辨率。
+- 官方 Scene、六个 Prefab、resource/meta 已集成到正式工程；workbench 机械转换脚本没有进入
+  runtime，11 个自定义 component UUID 继续由维护版 TypeScript 承接；
+- 六个 Prefab 的源/导入节点数静态一致：39 / 321 / 4 / 58 / 11 / 58；
+- 当前 gate：`OfficialImporterOutputIntegratedAwaitingHumanSerializationReview`；
+- 下一步：人工打开正式工程，复核 Scene/Prefab、RoomChoose、组件字段和 Console。
 
 ### GameHub
 
@@ -165,8 +167,8 @@
 
 ```text
 LastStableGate: Creator247OriginalClientParityVerified
-CurrentGate: OfficialImporterOutputCapturedAwaitingScriptReplacementAndSerializationAudit
-NextAction: Integrate official Scene/Prefab/meta output and replace imported scripts with maintained 3.8 TypeScript under original UUIDs
+CurrentGate: OfficialImporterOutputIntegratedAwaitingHumanSerializationReview
+NextAction: Open the canonical Creator 3.8.8 project and inspect Scene, six Prefabs, component bindings and Console
 DoNotDo: polyfill transpiler helpers; fake CommonJS exports; add empty module aliases; delete Missing Script; redraw UI; regenerate UUIDs
 ```
 

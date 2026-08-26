@@ -1,8 +1,55 @@
 {
-  "ver": "2.1.2",
-  "uuid": "59ed8036-25a5-496c-8cf0-fa6ed17f585d",
+  "ver": "1.0.6",
   "importer": "bitmap-font",
-  "textureUuid": "286532c3-2b20-4b74-b51b-10b0b5cbbdda",
-  "fontSize": 52,
-  "subMetas": {}
+  "imported": true,
+  "uuid": "59ed8036-25a5-496c-8cf0-fa6ed17f585d",
+  "files": [
+    ".json"
+  ],
+  "subMetas": {},
+  "userData": {
+    "_fntConfig": {
+      "commonHeight": 52,
+      "fontSize": 52,
+      "atlasName": "2.png",
+      "fontDefDictionary": {
+        "53": {
+          "rect": {
+            "x": 115,
+            "y": 2,
+            "width": 48,
+            "height": 52
+          },
+          "xOffset": 0,
+          "yOffset": 0,
+          "xAdvance": 48
+        },
+        "98": {
+          "rect": {
+            "x": 2,
+            "y": 2,
+            "width": 54,
+            "height": 52
+          },
+          "xOffset": 0,
+          "yOffset": 0,
+          "xAdvance": 54
+        },
+        "119": {
+          "rect": {
+            "x": 58,
+            "y": 2,
+            "width": 55,
+            "height": 50
+          },
+          "xOffset": 0,
+          "yOffset": 0,
+          "xAdvance": 55
+        }
+      },
+      "kerningDict": {}
+    },
+    "fontSize": 52,
+    "textureUuid": "286532c3-2b20-4b74-b51b-10b0b5cbbdda"
+  }
 }

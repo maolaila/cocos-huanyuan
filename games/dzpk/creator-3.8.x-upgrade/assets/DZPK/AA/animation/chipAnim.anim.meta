@@ -1,6 +1,13 @@
 {
-  "ver": "2.1.2",
-  "uuid": "27118828-18c0-4066-b376-91e258fa49a9",
+  "ver": "2.0.4",
   "importer": "animation-clip",
-  "subMetas": {}
+  "imported": true,
+  "uuid": "27118828-18c0-4066-b376-91e258fa49a9",
+  "files": [
+    ".bin"
+  ],
+  "subMetas": {},
+  "userData": {
+    "name": "chipAnim"
+  }
 }

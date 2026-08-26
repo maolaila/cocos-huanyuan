@@ -1,9 +1,13 @@
 {
-  "ver": "1.3.2",
-  "uuid": "8c9ac144-1168-4a02-b5ee-f895a4d6591e",
+  "ver": "1.1.50",
   "importer": "prefab",
-  "optimizationPolicy": "AUTO",
-  "asyncLoadAssets": false,
-  "readonly": false,
-  "subMetas": {}
+  "imported": true,
+  "uuid": "8c9ac144-1168-4a02-b5ee-f895a4d6591e",
+  "files": [
+    ".json"
+  ],
+  "subMetas": {},
+  "userData": {
+    "syncNodeName": "Bank"
+  }
 }

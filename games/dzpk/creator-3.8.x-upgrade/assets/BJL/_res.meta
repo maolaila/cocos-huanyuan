@@ -1,13 +1,9 @@
 {
-  "ver": "1.1.3",
-  "uuid": "8a7f1772-4307-4768-9a8a-7a5999464854",
-  "importer": "folder",
-  "isBundle": false,
-  "bundleName": "",
-  "priority": 1,
-  "compressionType": {},
-  "optimizeHotUpdate": {},
-  "inlineSpriteFrames": {},
-  "isRemoteBundle": {},
-  "subMetas": {}
+  "ver": "1.2.0",
+  "importer": "directory",
+  "imported": true,
+  "uuid": "4044ae75-6ad9-4063-a649-398550b980ab",
+  "files": [],
+  "subMetas": {},
+  "userData": {}
 }

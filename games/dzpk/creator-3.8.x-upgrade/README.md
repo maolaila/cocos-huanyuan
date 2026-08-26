@@ -12,9 +12,10 @@ Status：`InProgressStaticMigration`
 - 旧 JavaScript 只保存在 `migration-source/creator-2.4.7`，不会作为 3.8 runtime 编译；
 - 正在把 Standalone 与语义组件迁成 TypeScript/ES Module；
 - Creator 3.8.8 已完成脚本导入，但直接复制的 2.4 `.fire/.prefab` 无法打开；干净
-  workbench 已通过 Cocos 官方 **Import Cocos Creator 2.x Project** 生成 3.x 序列化输入，
-  当前正在审计输出并以可维护 TypeScript 替换 importer 机械转换的旧模块脚本；
-- 尚未通过 Scene/Prefab 打开检查或运行确认。
+  workbench 已通过 Cocos 官方 **Import Cocos Creator 2.x Project** 生成 3.x 序列化输入；
+- 官方 Scene、六个 Prefab、资源和 meta 已集成，机械转换的旧模块脚本已排除，组件继续绑定
+  维护版 TypeScript 的原 UUID；
+- 尚未通过正式工程的 Scene/Prefab 打开检查或运行确认。
 
 因此当前不能称为 `Creator38OriginalClientParityVerified`。
 
