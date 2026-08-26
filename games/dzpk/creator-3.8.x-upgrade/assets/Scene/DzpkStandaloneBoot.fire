@@ -1,0 +1,150 @@
+[
+  {
+    "__type__": "cc.SceneAsset",
+    "_name": "DzpkStandaloneBoot",
+    "scene": { "__id__": 1 }
+  },
+  {
+    "__type__": "cc.Scene",
+    "_name": "DzpkStandaloneBoot",
+    "_active": false,
+    "_children": [{ "__id__": 2 }],
+    "_anchorPoint": { "__type__": "cc.Vec2", "x": 0, "y": 0 },
+    "_trs": {
+      "__type__": "TypedArray",
+      "ctor": "Float64Array",
+      "array": [0, 0, 0, 0, 0, 0, 1, 1, 1, 1]
+    },
+    "_id": "5bb18d35-58bc-4fd9-9d4f-16b53414168e"
+  },
+  {
+    "__type__": "cc.Node",
+    "_name": "Canvas",
+    "_id": "dzpk-original-canvas",
+    "_parent": { "__id__": 1 },
+    "_children": [
+      { "__id__": 3 },
+      { "__id__": 5 },
+      { "__id__": 6 },
+      { "__id__": 12 },
+      { "__id__": 7 },
+      { "__id__": 8 }
+    ],
+    "_components": [
+      { "__id__": 9 },
+      { "__id__": 10 },
+      { "__id__": 11 }
+    ],
+    "_color": { "__type__": "cc.Color", "r": 255, "g": 255, "b": 255, "a": 255 },
+    "_contentSize": { "__type__": "cc.Size", "width": 1334, "height": 750 },
+    "_trs": {
+      "__type__": "TypedArray",
+      "ctor": "Float64Array",
+      "array": [667, 375, 0, 0, 0, 0, 1, 1, 1, 1]
+    }
+  },
+  {
+    "__type__": "cc.Node",
+    "_name": "Main Camera",
+    "_parent": { "__id__": 2 },
+    "_components": [{ "__id__": 4 }]
+  },
+  {
+    "__type__": "cc.Camera",
+    "_clearFlags": 7,
+    "_depth": -1,
+    "node": { "__id__": 3 }
+  },
+  {
+    "__type__": "cc.Node",
+    "_name": "Game",
+    "_active": false,
+    "_parent": { "__id__": 2 },
+    "_contentSize": { "__type__": "cc.Size", "width": 1334, "height": 750 }
+  },
+  {
+    "__type__": "cc.Node",
+    "_name": "Room",
+    "_active": true,
+    "_parent": { "__id__": 2 },
+    "_contentSize": { "__type__": "cc.Size", "width": 1334, "height": 750 }
+  },
+  {
+    "__type__": "cc.Node",
+    "_name": "UIShow",
+    "_active": true,
+    "_parent": { "__id__": 2 },
+    "_contentSize": { "__type__": "cc.Size", "width": 1334, "height": 750 }
+  },
+  {
+    "__type__": "cc.Node",
+    "_name": "MessageOverlay",
+    "_active": true,
+    "_parent": { "__id__": 2 },
+    "_contentSize": { "__type__": "cc.Size", "width": 1334, "height": 750 }
+  },
+  {
+    "__type__": "cc.Canvas",
+    "_fitWidth": true,
+    "_fitHeight": true,
+    "_designResolution": { "__type__": "cc.Size", "width": 1334, "height": 750 },
+    "node": { "__id__": 2 }
+  },
+  {
+    "__type__": "cc.Widget",
+    "_alignFlags": 45,
+    "node": { "__id__": 2 }
+  },
+  {
+    "__type__": "bd450/Ug+JH3pPiKiyIvmVE",
+    "node": { "__id__": 2 }
+  },
+  {
+    "__type__": "cc.Node",
+    "_name": "Night",
+    "_opacity": 0,
+    "_zIndex": 999,
+    "_parent": { "__id__": 2 },
+    "_children": [{ "__id__": 13 }],
+    "_components": [{ "__id__": 16 }],
+    "_contentSize": { "__type__": "cc.Size", "width": 1334, "height": 750 },
+    "_trs": {
+      "__type__": "TypedArray",
+      "ctor": "Float64Array",
+      "array": [0, 0, 0, 0, 0, 0, 1, 1, 1, 1]
+    }
+  },
+  {
+    "__type__": "cc.Node",
+    "_name": "New Sprite(Splash)",
+    "_opacity": 40,
+    "_parent": { "__id__": 12 },
+    "_components": [{ "__id__": 14 }, { "__id__": 15 }],
+    "_color": { "__type__": "cc.Color", "r": 0, "g": 0, "b": 0, "a": 255 },
+    "_contentSize": { "__type__": "cc.Size", "width": 1334, "height": 750 },
+    "_trs": {
+      "__type__": "TypedArray",
+      "ctor": "Float64Array",
+      "array": [0, 0, 0, 0, 0, 0, 1, 1, 1, 1]
+    }
+  },
+  {
+    "__type__": "cc.Sprite",
+    "_sizeMode": 0,
+    "_materials": [{ "__uuid__": "eca5d2f2-8ef6-41c2-bbe6-f9c79d09c432" }],
+    "_spriteFrame": { "__uuid__": "a23235d1-15db-4b95-8439-a2e005bfff91" },
+    "node": { "__id__": 13 }
+  },
+  {
+    "__type__": "cc.Widget",
+    "_alignFlags": 45,
+    "_originalWidth": 100,
+    "_originalHeight": 100,
+    "node": { "__id__": 13 }
+  },
+  {
+    "__type__": "cc.Widget",
+    "_alignFlags": 45,
+    "node": { "__id__": 12 }
+  }
+]

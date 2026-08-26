@@ -1,0 +1,38 @@
+{
+  "ver": "2.3.7",
+  "uuid": "0110761c-2777-4d82-afba-1ec8e9ebb6b9",
+  "importer": "texture",
+  "type": "sprite",
+  "wrapMode": "clamp",
+  "filterMode": "bilinear",
+  "premultiplyAlpha": false,
+  "genMipmaps": false,
+  "packable": true,
+  "width": 42,
+  "height": 42,
+  "platformSettings": {},
+  "subMetas": {
+    "texasHoldem_battle_menu_s": {
+      "ver": "1.0.6",
+      "uuid": "39b009d3-f897-43e5-a458-62cf6682d25e",
+      "importer": "sprite-frame",
+      "rawTextureUuid": "0110761c-2777-4d82-afba-1ec8e9ebb6b9",
+      "trimType": "auto",
+      "trimThreshold": 1,
+      "rotated": false,
+      "offsetX": 0,
+      "offsetY": 0,
+      "trimX": 0,
+      "trimY": 0,
+      "width": 42,
+      "height": 42,
+      "rawWidth": 42,
+      "rawHeight": 42,
+      "borderTop": 0,
+      "borderBottom": 0,
+      "borderLeft": 0,
+      "borderRight": 0,
+      "subMetas": {}
+    }
+  }
+}

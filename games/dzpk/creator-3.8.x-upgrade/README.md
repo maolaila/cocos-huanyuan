@@ -1,16 +1,32 @@
 # DZPK Creator 3.8.x Upgrade
 
-Status：`PlannedLaterPhase`
+Status：`InProgressStaticMigration`
 
-本目录预留给从 `../creator-2.4.x-standalone` 迁移得到的 Creator 3.8.x 完整工程。
-迁移尚未开始，因此这里不复制 2.4.x 源码，也不声明可运行。
+本工程以 Creator `3.8.8` 官方 `empty-2d` 模板为结构事实源，从
+`../creator-2.4.x-standalone` 迁移。它与 2.4.x 工程并存，不覆盖冻结基线。
 
-计划顺序：
+## 当前节点
 
-1. 冻结 2.4.7 Prefab、资源 UUID、事件 trace、截图与源码身份；
-2. 建立干净的 Creator 3.8.x 工程和 API/序列化差异账本；
-3. 逐 Prefab 迁移资源和语义组件，保持 source event 与 GameHub backend 合约不变；
-4. 恢复桌面与横屏移动端主循环；
-5. 人工验收通过后，再恢复 2-6 名认证真人和后续真钱边界。
+- 已冻结 2.4.7 工程、六个 Prefab 与权威 Cocos commit；
+- 已导入原 DZPK/BJL/Hall 资源和 2.4.7 Scene/Prefab 序列化输入；
+- 旧 JavaScript 只保存在 `migration-source/creator-2.4.7`，不会作为 3.8 runtime 编译；
+- 正在把 Standalone 与语义组件迁成 TypeScript/ES Module；
+- 尚未经过人工 Creator 3.8.8 打开、自动序列化升级或运行确认。
 
-任何实际 3.8.x 文件进入本目录时，都必须同步更新本状态和迁移证据。
+因此当前不能称为 `Creator38OriginalClientParityVerified`。
+
+## 人工协作规则
+
+Codex 负责源码迁移和静态逻辑检查，不执行 Creator 构建、自动测试或浏览器验收。
+每个 checkpoint 完成后，由用户用 Creator 3.8.8 打开工程并反馈编辑器、Prefab 和运行结果。
+
+## 目录
+
+```text
+assets/                         # 3.8 runtime 资源与 TypeScript
+migration-source/creator-2.4.7 # 只读旧脚本证据，不参与 runtime
+docs/                           # 基线、兼容账本与人工检查单
+settings/ profiles/ .creator/  # Creator 3.8.8 官方模板结构
+```
+
+后续 2-6 认证真人和 REAL money 不属于本次客户端技术升级。

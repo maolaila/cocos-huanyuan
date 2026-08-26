@@ -1,0 +1,38 @@
+{
+  "ver": "2.3.7",
+  "uuid": "cf662e36-0224-4b0f-aa8e-adec20588ab6",
+  "importer": "texture",
+  "type": "sprite",
+  "wrapMode": "clamp",
+  "filterMode": "bilinear",
+  "premultiplyAlpha": false,
+  "genMipmaps": false,
+  "packable": true,
+  "width": 879,
+  "height": 18,
+  "platformSettings": {},
+  "subMetas": {
+    "texasHoldem_win_bank_per": {
+      "ver": "1.0.6",
+      "uuid": "f9822c0c-9c4b-4af8-a5c3-fd657a76d398",
+      "importer": "sprite-frame",
+      "rawTextureUuid": "cf662e36-0224-4b0f-aa8e-adec20588ab6",
+      "trimType": "auto",
+      "trimThreshold": 1,
+      "rotated": false,
+      "offsetX": 0,
+      "offsetY": 0,
+      "trimX": 0,
+      "trimY": 0,
+      "width": 879,
+      "height": 18,
+      "rawWidth": 879,
+      "rawHeight": 18,
+      "borderTop": 0,
+      "borderBottom": 0,
+      "borderLeft": 0,
+      "borderRight": 0,
+      "subMetas": {}
+    }
+  }
+}

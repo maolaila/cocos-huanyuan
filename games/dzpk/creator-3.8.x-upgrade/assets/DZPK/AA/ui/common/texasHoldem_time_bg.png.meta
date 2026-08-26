@@ -1,0 +1,38 @@
+{
+  "ver": "2.3.7",
+  "uuid": "6b6e384f-95d4-4b64-b9b8-55a3411599da",
+  "importer": "texture",
+  "type": "sprite",
+  "wrapMode": "clamp",
+  "filterMode": "bilinear",
+  "premultiplyAlpha": false,
+  "genMipmaps": false,
+  "packable": true,
+  "width": 108,
+  "height": 160,
+  "platformSettings": {},
+  "subMetas": {
+    "texasHoldem_time_bg": {
+      "ver": "1.0.6",
+      "uuid": "c0f4035a-7280-46dc-a599-701273ffb732",
+      "importer": "sprite-frame",
+      "rawTextureUuid": "6b6e384f-95d4-4b64-b9b8-55a3411599da",
+      "trimType": "auto",
+      "trimThreshold": 1,
+      "rotated": false,
+      "offsetX": 0,
+      "offsetY": 0,
+      "trimX": 0,
+      "trimY": 0,
+      "width": 108,
+      "height": 160,
+      "rawWidth": 108,
+      "rawHeight": 160,
+      "borderTop": 0,
+      "borderBottom": 0,
+      "borderLeft": 0,
+      "borderRight": 0,
+      "subMetas": {}
+    }
+  }
+}

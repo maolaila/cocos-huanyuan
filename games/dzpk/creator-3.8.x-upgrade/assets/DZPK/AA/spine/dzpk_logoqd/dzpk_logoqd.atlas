@@ -1,0 +1,720 @@
+
+dzpk_logoqd.png
+size: 976,693
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+dzpk_logoqdas
+  rotate: true
+  xy: 147, 340
+  size: 351, 255
+  orig: 351, 255
+  offset: 0, 0
+  index: -1
+dzpk_logoqdcm1
+  rotate: true
+  xy: 351, 94
+  size: 125, 114
+  orig: 125, 114
+  offset: 0, 0
+  index: -1
+dzpk_logoqdcm1cy
+  rotate: false
+  xy: 621, 354
+  size: 46, 33
+  orig: 46, 33
+  offset: 0, 0
+  index: -1
+dzpk_logoqdcm1gd
+  rotate: false
+  xy: 800, 190
+  size: 74, 74
+  orig: 74, 74
+  offset: 0, 0
+  index: -1
+dzpk_logoqdcm2
+  rotate: true
+  xy: 366, 222
+  size: 116, 113
+  orig: 116, 113
+  offset: 0, 0
+  index: -1
+dzpk_logoqdcm2cy
+  rotate: false
+  xy: 669, 358
+  size: 60, 29
+  orig: 60, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdcm3
+  rotate: false
+  xy: 381, 3
+  size: 112, 89
+  orig: 112, 89
+  offset: 0, 0
+  index: -1
+dzpk_logoqdcm3cy
+  rotate: false
+  xy: 687, 519
+  size: 44, 24
+  orig: 44, 24
+  offset: 0, 0
+  index: -1
+dzpk_logoqdcm4
+  rotate: true
+  xy: 621, 594
+  size: 51, 42
+  orig: 51, 42
+  offset: 0, 0
+  index: -1
+dzpk_logoqdcm4cy
+  rotate: true
+  xy: 727, 477
+  size: 37, 20
+  orig: 37, 20
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg0
+  rotate: false
+  xy: 45, 2
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg1
+  rotate: false
+  xy: 129, 2
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg10
+  rotate: false
+  xy: 889, 473
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg11
+  rotate: true
+  xy: 621, 389
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg12
+  rotate: true
+  xy: 636, 270
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg13
+  rotate: true
+  xy: 676, 389
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg14
+  rotate: false
+  xy: 749, 490
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg15
+  rotate: true
+  xy: 833, 432
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg16
+  rotate: false
+  xy: 749, 435
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg17
+  rotate: false
+  xy: 888, 418
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg18
+  rotate: false
+  xy: 731, 380
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg19
+  rotate: false
+  xy: 731, 325
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg2
+  rotate: false
+  xy: 213, 2
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg20
+  rotate: false
+  xy: 881, 363
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg21
+  rotate: false
+  xy: 881, 308
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg22
+  rotate: false
+  xy: 876, 253
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg23
+  rotate: false
+  xy: 691, 270
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg24
+  rotate: true
+  xy: 661, 169
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg25
+  rotate: false
+  xy: 716, 215
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg26
+  rotate: false
+  xy: 716, 160
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg27
+  rotate: false
+  xy: 876, 198
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg28
+  rotate: false
+  xy: 876, 143
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg29
+  rotate: true
+  xy: 800, 106
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg3
+  rotate: false
+  xy: 297, 2
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg30
+  rotate: false
+  xy: 713, 105
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg31
+  rotate: true
+  xy: 666, 21
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg32
+  rotate: true
+  xy: 721, 21
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg33
+  rotate: true
+  xy: 776, 21
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg34
+  rotate: true
+  xy: 831, 22
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg35
+  rotate: false
+  xy: 886, 88
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg36
+  rotate: true
+  xy: 886, 4
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg4
+  rotate: false
+  xy: 892, 638
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg5
+  rotate: false
+  xy: 892, 583
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg6
+  rotate: false
+  xy: 666, 545
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg7
+  rotate: false
+  xy: 750, 545
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg8
+  rotate: true
+  xy: 834, 516
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddblg9
+  rotate: false
+  xy: 889, 528
+  size: 82, 53
+  orig: 82, 53
+  offset: 0, 0
+  index: -1
+dzpk_logoqddjgb1
+  rotate: false
+  xy: 815, 379
+  size: 64, 51
+  orig: 64, 51
+  offset: 0, 0
+  index: -1
+dzpk_logoqddjgb2
+  rotate: false
+  xy: 815, 326
+  size: 64, 51
+  orig: 64, 51
+  offset: 0, 0
+  index: -1
+dzpk_logoqdgd1
+  rotate: false
+  xy: 351, 66
+  size: 26, 26
+  orig: 26, 26
+  offset: 0, 0
+  index: -1
+dzpk_logoqdgd2
+  rotate: false
+  xy: 687, 476
+  size: 38, 38
+  orig: 38, 38
+  offset: 0, 0
+  index: -1
+dzpk_logoqdgm
+  rotate: false
+  xy: 45, 57
+  size: 304, 158
+  orig: 304, 158
+  offset: 0, 0
+  index: -1
+dzpk_logoqdgy
+  rotate: true
+  xy: 621, 647
+  size: 44, 43
+  orig: 44, 43
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg0
+  rotate: true
+  xy: 404, 580
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg1
+  rotate: true
+  xy: 404, 467
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg10
+  rotate: true
+  xy: 497, 580
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg11
+  rotate: true
+  xy: 497, 467
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg12
+  rotate: true
+  xy: 497, 354
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg13
+  rotate: true
+  xy: 512, 241
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg14
+  rotate: true
+  xy: 528, 580
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg15
+  rotate: true
+  xy: 528, 467
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg16
+  rotate: true
+  xy: 528, 354
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg17
+  rotate: true
+  xy: 543, 241
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg18
+  rotate: true
+  xy: 568, 128
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg19
+  rotate: true
+  xy: 559, 580
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg2
+  rotate: true
+  xy: 404, 354
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg20
+  rotate: true
+  xy: 559, 467
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg21
+  rotate: true
+  xy: 559, 354
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg22
+  rotate: true
+  xy: 574, 241
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg23
+  rotate: true
+  xy: 599, 128
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg24
+  rotate: true
+  xy: 604, 15
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg25
+  rotate: true
+  xy: 590, 580
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg26
+  rotate: true
+  xy: 590, 467
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg27
+  rotate: true
+  xy: 590, 354
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg28
+  rotate: true
+  xy: 605, 241
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg29
+  rotate: true
+  xy: 630, 128
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg3
+  rotate: true
+  xy: 435, 580
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg30
+  rotate: true
+  xy: 635, 15
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg31
+  rotate: false
+  xy: 666, 662
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg32
+  rotate: false
+  xy: 779, 662
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg33
+  rotate: false
+  xy: 666, 631
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg34
+  rotate: false
+  xy: 779, 631
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg35
+  rotate: false
+  xy: 666, 600
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg36
+  rotate: false
+  xy: 779, 600
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg4
+  rotate: true
+  xy: 435, 467
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg5
+  rotate: true
+  xy: 435, 354
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg6
+  rotate: true
+  xy: 466, 580
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg7
+  rotate: true
+  xy: 466, 467
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg8
+  rotate: true
+  xy: 466, 354
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdlg9
+  rotate: true
+  xy: 481, 241
+  size: 111, 29
+  orig: 111, 29
+  offset: 0, 0
+  index: -1
+dzpk_logoqdpai1
+  rotate: true
+  xy: 147, 220
+  size: 118, 116
+  orig: 118, 116
+  offset: 0, 0
+  index: -1
+dzpk_logoqdpai2
+  rotate: false
+  xy: 467, 107
+  size: 99, 113
+  orig: 99, 113
+  offset: 0, 0
+  index: -1
+dzpk_logoqdpai3
+  rotate: true
+  xy: 495, 22
+  size: 83, 107
+  orig: 83, 107
+  offset: 0, 0
+  index: -1
+dzpk_logoqdpuke1
+  rotate: true
+  xy: 265, 221
+  size: 117, 99
+  orig: 117, 99
+  offset: 0, 0
+  index: -1
+dzpk_logoqdpuke1cy
+  rotate: true
+  xy: 621, 542
+  size: 50, 41
+  orig: 50, 41
+  offset: 0, 0
+  index: -1
+dzpk_logoqdpuke2
+  rotate: true
+  xy: 666, 110
+  size: 57, 45
+  orig: 57, 45
+  offset: 0, 0
+  index: -1
+dzpk_logoqdpuke2cy
+  rotate: false
+  xy: 636, 243
+  size: 23, 25
+  orig: 23, 25
+  offset: 0, 0
+  index: -1
+dzpk_logoqdpuke3
+  rotate: true
+  xy: 621, 473
+  size: 67, 64
+  orig: 67, 64
+  offset: 0, 0
+  index: -1
+dzpk_logoqdpuke3cy
+  rotate: false
+  xy: 495, 4
+  size: 45, 16
+  orig: 45, 16
+  offset: 0, 0
+  index: -1
+dzpk_logoqdtext1
+  rotate: true
+  xy: 2, 217
+  size: 474, 143
+  orig: 474, 143
+  offset: 0, 0
+  index: -1
+dzpk_logoqdtext2
+  rotate: true
+  xy: 2, 14
+  size: 201, 41
+  orig: 201, 41
+  offset: 0, 0
+  index: -1
+dzpk_logoqdxd
+  rotate: false
+  xy: 815, 266
+  size: 59, 58
+  orig: 59, 58
+  offset: 0, 0
+  index: -1

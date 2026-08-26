@@ -17,8 +17,9 @@ KG Cocos client gameId / PHP gtype：`19`
 
 ### `creator-3.8.x-upgrade`
 
-后续迁移目录。必须以 2.4.x 独立版为冻结输入，逐项解决序列化、Asset Bundle、
-组件 API、构建、浏览器和移动端差异。当前仅为 Planned，不代表已完成 3.8.x 工程。
+迁移已开始。当前完成 Creator 3.8.8 工程骨架、权威资源输入、基础 TypeScript、
+Load/Room 与序列化组件桥，正在等待首次人工 Creator 3.8.8 导入保存；牌桌行为尚未迁移，
+不能称为可运行 3.8.x 工程。
 
 ## 共同边界
 

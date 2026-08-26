@@ -1,0 +1,20 @@
+{
+  "schema": "dzpk-creator-3.8-migration-baseline-v1",
+  "targetCreatorVersion": "3.8.8",
+  "sourceCreatorVersion": "2.4.7",
+  "sourceRepositoryCommit": "70421d877e6866607aff232c686fb7946d42e50a",
+  "sourceProjectCommit": "8f08eb4b234b44c093d3338535d169bde0063183",
+  "authorityCocosCommit": "b5694d576c482e02dc00a33f51eea633b9cd647f",
+  "sourceProjectFileCount": 836,
+  "prefabs": [
+    { "name": "Bank", "bytes": 38918, "sha256": "94ac7944b95c9811edce3db382e82af2a3373f5847bfbf9b00fc53aac93acda9", "runtime": "NotApplicable" },
+    { "name": "DZPKMain", "bytes": 337557, "sha256": "c3dc23b9aae832b91ea70fa7f28f17615bb6b510de4f5e57d4cc529e3d7c3db1", "runtime": "Required" },
+    { "name": "Load", "bytes": 2983, "sha256": "a8ba5b98036d45d57ff30b9dbddb88b146616bc4887f4bfee9eac55eac3a3449", "runtime": "Required" },
+    { "name": "Room", "bytes": 60492, "sha256": "3bb185f13bf2ee145561a928fa080ea9445b037942ef376cbe02f3007709b967", "runtime": "Required" },
+    { "name": "Rule", "bytes": 10839, "sha256": "7e4366a86d0c65683506540d453934be0e6107b46bef31c4aeab07dc3e4a7291", "runtime": "Required" },
+    { "name": "Set", "bytes": 58175, "sha256": "962f2e69dab8a9bb89c4c6d0e559d0fd20b44e43368249f9f047dce2d9b01191", "runtime": "Required" }
+  ],
+  "moneyBoundary": "TRIAL_ONLY",
+  "multiplayerBoundary": "ONE_AUTHENTICATED_HUMAN_PLUS_FIVE_SERVER_BOTS",
+  "verification": "PENDING_HUMAN_CREATOR_3_8_REVIEW"
+}
