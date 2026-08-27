@@ -58,6 +58,8 @@
 - 当前 gate：`Creator38TableBehaviorImplementedStaticAwaitingHumanReview`；
 - 下一步：人工执行 `creator-3.8.x-upgrade/docs/manual-checkpoint-04.md` 的完整牌局、第二手、
   返回 Room 与重连快照。
+- 2026-08-27 已为 Creator `http://localhost:7456` 使用官网商户 `OFFICIAL001` 生成一次本地
+  TRIAL 启动凭证；只确认后端/静态预览服务可达，尚未执行或通过牌局人工检查。
 
 ### GameHub
 
@@ -217,6 +219,23 @@
 - PreventionRule：Presentation 完成前生成节点路径/组件清单，逐条验证 Node、Slider、ProgressBar、
   Button、Toggle、Animation 与 Spine 所在节点。
 - ResolutionStatus：37 条固定路径与关键组件静态核对通过，待人工运行。
+
+### `DZPK-PIT-016` — 本地 Creator Origin、官网商户和数据库账本漂移
+
+- Symptom：启动命令把 Markdown 链接字面量传给 `--preview`；已删除的 `DEMO001` 被旧本地库
+  残留；`OFFICIAL001` 仍有旧 `allowedGames=['*']`；安全迁移因 `0000` hash 不一致拒绝前滚，
+  当前代码又读取本地库缺失的 TRIAL 会话字段/凭证表。
+- RootCause：人工检查命令、Creator 临时端口、商户 Origin/内部官网语义和本地数据库快照没有形成
+  同一版本化启动合同。
+- RejectedApproach：继续使用 `DEMO001`、绕过 Origin、伪造 launch token、忽略迁移账本强跑全部
+  SQL，或把旧库当作生产迁移通过证据。
+- Decision：只使用官网商户 `OFFICIAL001`；显式允许 Creator `7456` Origin；恢复官网商户
+  `allowedGames=null` 的内部语义；正式 migrator 继续保持阻塞。仅为本次人工 TRIAL 预览，从正式
+  `0023/0027` 精确补齐实际读取的会话字段和 `session_credentials`，不写伪迁移账本。
+- PreventionRule：后续标准化命令应先检查原始 URL、商户身份/Origin、migration ledger 与 schema，
+  并为 Creator 人工检查建立可重建的专用本地数据库，不能复用漂移库。
+- ResolutionStatus：本地 URL 已生成；数据库兼容补丁只算人工预览前置，不算 migration 通过或
+  GameHub 集成完成。
 
 ## 4. 当前恢复点
 
