@@ -38,5 +38,5 @@
 | Table Model | ImplementedStatic | viewer-safe 纯状态已迁移 |
 | Table Controller/Presentation | SerializedBridgeOnly | handler/字段存在，行为待 Checkpoint 02 |
 | Rule/Set/shared components | ImplementedStatic | Popup、Toggle、PageView、DropDown、AdaptView |
-| 3.8 序列化输出 | IntegratedStaticAwaitingHumanEditor | 官方输出已集成；6 个 Prefab 节点数与 2.4 输入静态一致 |
+| 3.8 序列化输出 | HumanEditorVerified | 官方输出已集成；节点数一致，七个资源可打开/显示且无红错 |
 | 可运行结论 | PendingHumanReview | 不得提前宣称 |

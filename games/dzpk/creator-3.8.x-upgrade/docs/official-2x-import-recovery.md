@@ -1,6 +1,6 @@
 # Creator 2.4.x serialization recovery
 
-Status: `OfficialImporterOutputIntegratedAwaitingHumanSerializationReview`
+Status: `PostImportUiNormalizationHumanVerified`
 
 ## Failure
 
@@ -69,3 +69,26 @@ to obtain authoritative Creator-generated 3.x serialization output.
 - Added the original `1334 x 750`, fit-width and fit-height values to 3.8 project settings.
 - Current boundary: no compilation or runtime claim; the canonical project now awaits human Creator
   Scene/Prefab opening and Inspector review.
+
+## Manual Checkpoint 02 findings and normalization
+
+- Human screenshots proved Bank, DZPKMain, Load, Rule and Set could enter Prefab edit mode, but their
+  scene view was black while their hierarchy and serialized Sprite resources remained present.
+- All 499 serialized nodes were on `DEFAULT`. Normalization now assigns 491 Prefab nodes and seven
+  Canvas-subtree Scene nodes to `UI_2D`; the Main Camera remains `DEFAULT`, matching Creator's 2D
+  default scene contract.
+- Room failed because `info` had `cc.Widget` without `cc.UITransform`, and `jxlw_quickstart` had
+  `sp.Skeleton` without `cc.UITransform`.
+- The same importer omission existed on six table `cc.ParticleSystem2D` nodes, one table Spine node and
+  one Sprite/Button node. Ten importer-shaped default UITransforms were added in total without changing
+  node position, source resource, explicit imported size or custom component data.
+- The repeatable postprocessor is `scripts/normalize-creator38-imported-ui.mjs`.
+- Spine JSON `3.6.37` versus runtime `3.8.99` remains a warning-only pending visual item. The source JSON
+  version string is not rewritten because that would not perform a real Spine data conversion.
+
+## Manual Checkpoint 03 result
+
+- On 2026-08-27 the user confirmed Room and all other Prefabs displayed normally in the editor.
+- No red Console error remained after the layer/UITransform normalization.
+- This closes the official serialization import/open/display gate only. Table Controller/Presentation behavior,
+  runtime play and original-client parity remain pending.

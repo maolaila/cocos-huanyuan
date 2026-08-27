@@ -15,7 +15,9 @@ Status：`InProgressStaticMigration`
   workbench 已通过 Cocos 官方 **Import Cocos Creator 2.x Project** 生成 3.x 序列化输入；
 - 官方 Scene、六个 Prefab、资源和 meta 已集成，机械转换的旧模块脚本已排除，组件继续绑定
   维护版 TypeScript 的原 UUID；
-- 尚未通过正式工程的 Scene/Prefab 打开检查或运行确认。
+- 已规范化 importer 遗留的 DEFAULT/UI_2D Layer 和十个缺失 UITransform；
+- 2026-08-27 人工确认七个序列化资源均能正常打开/显示且无红错；
+- 牌桌 Controller/Presentation 行为和运行牌局仍未迁移完成。
 
 因此当前不能称为 `Creator38OriginalClientParityVerified`。
 

@@ -20,19 +20,29 @@
     "workbench": "C:/works/dzpk-creator38-official-import-workbench",
     "humanImportResult": "IMPORT_COMPLETED_WITH_SCRIPT_MIGRATION_ERRORS",
     "serializedAssets": [
-      { "name": "Bank", "nodes": 39, "bytes": 92993, "sha256": "d2b013572b2f1d045b449a90b930640f4b447391178ea037a8a86dd98c050ca0" },
-      { "name": "DZPKMain", "nodes": 321, "bytes": 764210, "sha256": "a195b0bd774b1fddd62240107f4461c5602c768299d720ef631e8c7ae1b3e054" },
-      { "name": "Load", "nodes": 4, "bytes": 8403, "sha256": "637fc5a55e12653f2c2ac338b2c256114cd6597000e7b0fac8944da5d1956d0a" },
-      { "name": "Room", "nodes": 58, "bytes": 135582, "sha256": "c1863129d037fd5aea23e29c9c415154bf63df50cab8cd4b0491e499c8bf9410" },
-      { "name": "Rule", "nodes": 11, "bytes": 27483, "sha256": "397372cbf1ce917b14b7206d3b2583b527a7d7b9be1fb0bb5c3dbee463bc49ee" },
-      { "name": "Set", "nodes": 58, "bytes": 136480, "sha256": "f1a53a2865a6d265d2683c9c4a0187c4b937d9ac942de9248afe98d3c0b1654d" },
-      { "name": "DzpkStandaloneBoot", "nodes": 8, "bytes": 15512, "sha256": "d3dba7130fcb3673b6eab3893b5081f1e3fc15abca9cbeb773a8635a4581a8f9" }
+      { "name": "Bank", "nodes": 39, "bytes": 92916, "sha256": "18dea49a4a5df6ade24d73633aaaef14e52c4ad0db60d3a51532b28fb329b94e" },
+      { "name": "DZPKMain", "nodes": 321, "bytes": 766858, "sha256": "57b72406b7819fd2a2a6cb3e80ad1711524d7e0ae30b438ca78f56f4df28d537" },
+      { "name": "Load", "nodes": 4, "bytes": 8396, "sha256": "b1506908bc136a63305f72eca8f9c9fc73f5cb5fda1efd3441e6b773ece8eb29" },
+      { "name": "Room", "nodes": 58, "bytes": 136287, "sha256": "c6cbdcac3af3127574adce938c2ae0a3bba0612e87ddecad52056cbfd4172d19" },
+      { "name": "Rule", "nodes": 11, "bytes": 27462, "sha256": "fec064542102c8e2fc62a79b4c1bd69c78f40c7256c6b95bb67a4e2244ff83e0" },
+      { "name": "Set", "nodes": 58, "bytes": 136365, "sha256": "8525926a4d2f0739eb65e81231b83f2b3bb9e3d5f41c07e12c2013f3dfb75367" },
+      { "name": "DzpkStandaloneBoot", "nodes": 8, "bytes": 15499, "sha256": "869183e28e8540fb38bc963c2ac1e001732bebe75f461be52f46217be50ede4a" }
     ],
     "nodeCountParity": "MATCHED_STATIC_COUNT",
     "customSerializedTypeCount": 11,
-    "scriptPolicy": "REPLACE_IMPORTED_TRANSPILED_OUTPUT_WITH_MAINTAINED_TYPESCRIPT_UNDER_ORIGINAL_UUID"
+    "scriptPolicy": "REPLACE_IMPORTED_TRANSPILED_OUTPUT_WITH_MAINTAINED_TYPESCRIPT_UNDER_ORIGINAL_UUID",
+    "postImportUiNormalization": {
+      "script": "scripts/normalize-creator38-imported-ui.mjs",
+      "ui2dLayerNodeCount": 498,
+      "defaultCameraNodeCount": 1,
+      "addedUiTransformCount": 10,
+      "addedUiTransformBreakdown": {
+        "Room": 2,
+        "DZPKMain": 8
+      }
+    }
   },
   "moneyBoundary": "TRIAL_ONLY",
   "multiplayerBoundary": "ONE_AUTHENTICATED_HUMAN_PLUS_FIVE_SERVER_BOTS",
-  "verification": "PENDING_HUMAN_CANONICAL_PROJECT_SERIALIZATION_REVIEW"
+  "verification": "HUMAN_CANONICAL_SERIALIZATION_OPEN_AND_DISPLAY_PASSED"
 }

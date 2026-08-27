@@ -1,7 +1,8 @@
 # Creator 3.8 Serialized Component Rebind Ledger
 
 官方 2.x importer 已生成 3.x Scene/Prefab。以下 11 个 2.4 自定义 Class ID 在输出中仍然
-存在，并与维护版 3.8 TypeScript meta 的 UUID 一致；下一次人工检查确认实际 Inspector 绑定。
+存在，并与维护版 3.8 TypeScript meta 的 UUID 一致；2026-08-27 人工确认七个序列化资源均能
+正常打开和显示，Console 无红错。
 
 | Prefab | 3.8 class | UUID | 当前状态 |
 |---|---|---|---|
@@ -20,5 +21,5 @@
 官方 Room Prefab 仍保存三份 `RoomChoose` 组件及其 `img1` 序列化数组；importer 阶段的
 `Prefab asset missing` warning 发生在旧转译脚本未成功注册时，不能据此删除组件。
 
-若正式工程仍显示 Missing Script，先记录 Prefab、节点和缺失 UUID，不要重新挂一个新组件。
-当前 `.scene/.prefab/.meta` 是 Checkpoint 02 的输入；`SerializedBridgeOnly` 仍不代表牌桌可玩。
+若后续正式工程显示 Missing Script，先记录 Prefab、节点和缺失 UUID，不要重新挂一个新组件。
+当前 `.scene/.prefab/.meta` 已通过序列化打开/显示检查；`SerializedBridgeOnly` 仍不代表牌桌可玩。

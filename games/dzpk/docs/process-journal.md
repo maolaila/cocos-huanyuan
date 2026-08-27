@@ -4,7 +4,7 @@
 - KG gameId / gtype：`119 / 19`
 - 执行模式：`HUMAN_CHECKPOINTS`
 - 活标准：`kg-cocos-restoration-to-gamehub-v1`
-- 当前阶段：正式 3.8 工程序列化人工复核
+- 当前阶段：Creator 3.8.8 牌桌 Controller/Presentation 行为迁移
 - 当前结论：2.4 基线已冻结；3.8 parity 未通过；完整 GameHub/商户交付未完成
 
 本日志记录真实决策、失败和恢复点。较新的失败会撤销受影响的旧检查点，但不会抹去仍然正确的
@@ -40,8 +40,16 @@
 - 官方 Scene、六个 Prefab、resource/meta 已集成到正式工程；workbench 机械转换脚本没有进入
   runtime，11 个自定义 component UUID 继续由维护版 TypeScript 承接；
 - 六个 Prefab 的源/导入节点数静态一致：39 / 321 / 4 / 58 / 11 / 58；
-- 当前 gate：`OfficialImporterOutputIntegratedAwaitingHumanSerializationReview`；
-- 下一步：人工打开正式工程，复核 Scene/Prefab、RoomChoose、组件字段和 Console。
+- Manual Checkpoint 02 证明五个 Prefab 已进入编辑模式但中央画面全黑，Room 仍报
+  `contentSize/anchorPoint`；
+- 已将 491 个 Prefab 节点和 Scene 的 7 个 Canvas 子树节点设为 `UI_2D`，Main Camera 保持
+  `DEFAULT`；
+- 已给 Room 的 Widget/Spine 漏项和 DZPKMain 的粒子/Spine/Sprite-Button 漏项补共 10 个官方
+  默认结构的 UITransform；不改变节点位置、显式尺寸、资源或业务组件；
+- 2026-08-27 人工确认 Room 与其余 Prefab 均能正常打开/显示，Console 无红错；
+- 已取得 `Creator388OfficialSerializationImported`；
+- 当前 gate：`Creator38TableBehaviorMigrationInProgress`；
+- 下一步：从冻结 2.4 源码迁移牌桌 Model/Controller/Presentation、原事件回调和下一局流程。
 
 ### GameHub
 
@@ -163,12 +171,33 @@
 - PreventionRule：设计分辨率和 component registry 是导入后独立审计项。
 - ResolutionStatus：待处理。
 
+### `DZPK-PIT-012` — importer 只迁移 Canvas Layer，Prefab 全部留在 DEFAULT
+
+- Symptom：Bank、DZPKMain、Load、Rule、Set 能进入编辑模式且层级/资源存在，但中央编辑区全黑；
+  Inspector 显示 Layer=`DEFAULT`。
+- RootCause：官方 plugin 只在检测到 Canvas 本身时把默认 group 改为 `UI_2D`，不会递归转换
+  Canvas 子节点，也不会替纯 2D Prefab 设置 2D Layer。
+- Decision：所有纯 2D Prefab 节点和 Scene Canvas 子树使用 `UI_2D=1<<25`；Camera 保持
+  `DEFAULT=1<<30`。
+- PreventionRule：官方 importer 后必须单独审计 2D Layer；有层级不等于可渲染。
+- ResolutionStatus：人工复核通过。
+
+### `DZPK-PIT-013` — 有 UI 组件但没有 UITransform
+
+- Symptom：Room 打开时报 `contentSize/anchorPoint`；其它 Prefab 的粒子/Spine/Handle 存在潜在漏显。
+- RootCause：源节点没有显式 `_contentSize/_anchorPoint` 时，plugin 不会创建 UITransform，即使节点
+  已挂 Widget、Spine、ParticleSystem2D、Sprite/Button。
+- Decision：只给确有 UI renderer/layout/control 且缺失的节点追加 plugin 同结构默认
+  UITransform。本次 Room 2 个、DZPKMain 8 个。
+- PreventionRule：post-import audit 必须检查每个 UI 组件节点的同节点 UITransform。
+- ResolutionStatus：人工复核通过。
+
 ## 4. 当前恢复点
 
 ```text
-LastStableGate: Creator247OriginalClientParityVerified
-CurrentGate: OfficialImporterOutputIntegratedAwaitingHumanSerializationReview
-NextAction: Open the canonical Creator 3.8.8 project and inspect Scene, six Prefabs, component bindings and Console
+LastStableGate: Creator388OfficialSerializationImported
+CurrentGate: Creator38TableBehaviorMigrationInProgress
+NextAction: Migrate source-faithful table Controller/Presentation behavior from the frozen 2.4 baseline
 DoNotDo: polyfill transpiler helpers; fake CommonJS exports; add empty module aliases; delete Missing Script; redraw UI; regenerate UUIDs
 ```
 

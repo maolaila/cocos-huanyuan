@@ -1,6 +1,6 @@
 # Manual Checkpoint 02 — 官方序列化正式工程复核
 
-Status：`ReadyForHumanReview`
+Status：`SupersededByManualCheckpoint03`
 
 请关闭临时 workbench，然后使用 Creator 3.8.8 打开正式工程：
 
