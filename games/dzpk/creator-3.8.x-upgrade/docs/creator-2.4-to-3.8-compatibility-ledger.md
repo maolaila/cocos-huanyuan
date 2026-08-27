@@ -36,7 +36,19 @@
 | Cocos Boot/导航/资源 | ImplementedStatic | TypeScript、Asset Bundle、AudioSource |
 | Load/Room | ImplementedStatic | 原流程已迁移，等待 Prefab rebind |
 | Table Model | ImplementedStatic | viewer-safe 纯状态已迁移 |
-| Table Controller/Presentation | SerializedBridgeOnly | handler/字段存在，行为待 Checkpoint 02 |
+| Table Controller/Presentation | ImplementedStatic | 原 10 个牌桌事件、完整牌局状态编排、原节点渲染与 Tween 动画已迁移；待人工主循环 |
 | Rule/Set/shared components | ImplementedStatic | Popup、Toggle、PageView、DropDown、AdaptView |
 | 3.8 序列化输出 | HumanEditorVerified | 官方输出已集成；节点数一致，七个资源可打开/显示且无红错 |
-| 可运行结论 | PendingHumanReview | 不得提前宣称 |
+| 可运行结论 | PendingHumanReview | Manual Checkpoint 04 尚未执行，不得提前宣称 |
+
+## 牌桌行为迁移边界
+
+- `DzpkTableGameController` 只做 source-shaped 事件编排、快照覆盖和用户意图发送；发牌、机器人、
+  合法动作、结算与余额仍由 GameHub 权威 transport 决定；
+- `DzpkTablePresentation` 只操作官方 importer 生成的原 `DZPKMain` 节点、SpriteFrame、Spine、
+  Animation 和 Label，不创建替代牌桌；
+- 2.4 的 Node 动态字段 `betGold/sourcePosition` 已改为 `WeakMap`，避免把运行态数据写进序列化节点；
+- `cc.Action` 已按原延时迁移到 Tween/schedule；`Animation.play()` 在 3.8 返回 `void`，倒计时速度通过
+  `defaultClip + getState()` 设置；
+- Controller/Presentation 与纯 support 文件均不超过 1000 行；support 不挂 Prefab，不生成新 UI；
+- 静态核对 37 条固定节点路径及关键 Slider/ProgressBar/Button/Toggle/Animation/Spine 组件均存在。

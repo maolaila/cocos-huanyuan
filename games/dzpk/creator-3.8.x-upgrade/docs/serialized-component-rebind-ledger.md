@@ -9,9 +9,9 @@
 | Boot Scene | `DzpkStandaloneBoot` | `bd450fd4-83e2-47de-93e2-2a2c88be6544` | OfficialTypePresent / MaintainedTsUuidMatch |
 | Load | `DzpkLoadingScreenController` | `41f21fbc-4cb9-409c-b59c-fcff61a6cad8` | OfficialTypePresent / MaintainedTsUuidMatch |
 | Room | `DzpkRoomSelectionController` | `84ec9e6a-d3ac-434e-9990-4fc863466d3e` | OfficialTypePresent / MaintainedTsUuidMatch |
-| Room cards | `RoomChoose` | `d3efcaf2-3147-4de2-9bf1-7a0a32adf850` | OfficialTypePresent3x / AwaitingInspector |
-| DZPKMain | `DzpkTableGameController` | `6b8f401e-0cd5-4e75-a424-48316c0f02e7` | SerializedBridgeOnly |
-| DZPKMain | `DzpkTablePresentation` | `2de88e3d-5d6c-47b1-b942-913966e6ac3f` | SerializedBridgeOnly |
+| Room cards | `RoomChoose` | `d3efcaf2-3147-4de2-9bf1-7a0a32adf850` | HumanEditorVerified |
+| DZPKMain | `DzpkTableGameController` | `6b8f401e-0cd5-4e75-a424-48316c0f02e7` | MaintainedTsBehaviorPorted / AwaitingHumanFlow |
+| DZPKMain | `DzpkTablePresentation` | `2de88e3d-5d6c-47b1-b942-913966e6ac3f` | MaintainedTsBehaviorPorted / AwaitingHumanFlow |
 | DZPKMain | `DropDown` | `dd06c934-a75f-46d8-95b9-317ba9ef581d` | OfficialTypePresent / MaintainedTsUuidMatch |
 | DZPKMain | `AdaptView` | `f2748e31-1526-4387-b8ae-48eda2768367` | OfficialTypePresent / MaintainedTsUuidMatch |
 | Rule | `Rule` | `54b1f51b-95d5-4a15-b19a-f7a921cd7729` | OfficialTypePresent / MaintainedTsUuidMatch |
@@ -22,4 +22,5 @@
 `Prefab asset missing` warning 发生在旧转译脚本未成功注册时，不能据此删除组件。
 
 若后续正式工程显示 Missing Script，先记录 Prefab、节点和缺失 UUID，不要重新挂一个新组件。
-当前 `.scene/.prefab/.meta` 已通过序列化打开/显示检查；`SerializedBridgeOnly` 仍不代表牌桌可玩。
+当前 `.scene/.prefab/.meta` 已通过序列化打开/显示检查；牌桌脚本的静态迁移完成仍不代表牌桌
+可玩，必须执行 Manual Checkpoint 04 的完整主循环与快照恢复。

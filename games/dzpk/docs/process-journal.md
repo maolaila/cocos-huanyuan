@@ -48,8 +48,16 @@
   默认结构的 UITransform；不改变节点位置、显式尺寸、资源或业务组件；
 - 2026-08-27 人工确认 Room 与其余 Prefab 均能正常打开/显示，Console 无红错；
 - 已取得 `Creator388OfficialSerializationImported`；
-- 当前 gate：`Creator38TableBehaviorMigrationInProgress`；
-- 下一步：从冻结 2.4 源码迁移牌桌 Model/Controller/Presentation、原事件回调和下一局流程。
+- 已按冻结 2.4 语义迁移 `DzpkTableGameController` 与 `DzpkTablePresentation`：保留 10 个原
+  `Msg_DZPK_*` 事件、快照覆盖、发牌/下注/公共牌/结算/第二手、自动动作、原按钮和返回 Room；
+- `cc.Action`、Node 动态字段、全局服务分别迁移为 Tween/schedule、`WeakMap` 和显式
+  RuntimeServices；Controller/Presentation 的纯协议与节点访问已拆入 support 文件，所有源文件
+  均不超过 1000 行；
+- 静态核对 37 条牌桌固定节点路径和关键 UI/Animation/Spine 组件，修正一次误写的 Slider 提交
+  按钮路径；未执行 Creator 编译、预览或自动验证；
+- 当前 gate：`Creator38TableBehaviorImplementedStaticAwaitingHumanReview`；
+- 下一步：人工执行 `creator-3.8.x-upgrade/docs/manual-checkpoint-04.md` 的完整牌局、第二手、
+  返回 Room 与重连快照。
 
 ### GameHub
 
@@ -192,12 +200,30 @@
 - PreventionRule：post-import audit 必须检查每个 UI 组件节点的同节点 UITransform。
 - ResolutionStatus：人工复核通过。
 
+### `DZPK-PIT-014` — 沿用 2.4 的 `Animation.play().speed`
+
+- Symptom：静态迁移把 `countdownAnimation.play().speed = ...` 原样带入 3.8。
+- RootCause：Creator 2.4 `Animation.play()` 可取播放状态，3.8.8 的公开 API 返回 `void`。
+- Decision：先 `play()`，再用 `defaultClip.name` 取得 `getState()` 并设置 speed；不替换原动画剪辑。
+- PreventionRule：旧 Animation、Spine、Particle API 必须逐项查 3.8 签名，不能只改 import。
+- ResolutionStatus：静态修正，待 Manual Checkpoint 04。
+
+### `DZPK-PIT-015` — 把动态 Node 字段和相对路径机械照搬到 3.8
+
+- Symptom：2.4 在按钮/牌节点上写 `betGold/sourcePosition`；迁移中一度把提交按钮路径写成
+  `btn/jiabet/slider/btn`，而原节点实际是 `btn/jiabet/btn`。
+- RootCause：把运行态数据写入序列化 Node，且只凭代码片段猜相对父节点。
+- Decision：动态值改存 `WeakMap<Node, ...>`；所有固定路径从官方 importer 的 Prefab 树静态核对。
+- PreventionRule：Presentation 完成前生成节点路径/组件清单，逐条验证 Node、Slider、ProgressBar、
+  Button、Toggle、Animation 与 Spine 所在节点。
+- ResolutionStatus：37 条固定路径与关键组件静态核对通过，待人工运行。
+
 ## 4. 当前恢复点
 
 ```text
 LastStableGate: Creator388OfficialSerializationImported
-CurrentGate: Creator38TableBehaviorMigrationInProgress
-NextAction: Migrate source-faithful table Controller/Presentation behavior from the frozen 2.4 baseline
+CurrentGate: Creator38TableBehaviorImplementedStaticAwaitingHumanReview
+NextAction: Run creator-3.8.x-upgrade/docs/manual-checkpoint-04.md manually
 DoNotDo: polyfill transpiler helpers; fake CommonJS exports; add empty module aliases; delete Missing Script; redraw UI; regenerate UUIDs
 ```
 

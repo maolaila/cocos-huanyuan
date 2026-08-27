@@ -1,4 +1,19 @@
-import { Node, Sprite, SpriteAtlas, UIOpacity, assetManager, isValid, sp } from 'cc';
+import {
+  Color,
+  Label,
+  Node,
+  Sprite,
+  SpriteAtlas,
+  UIOpacity,
+  UITransform,
+  Vec3,
+  assetManager,
+  isValid,
+  sp,
+} from 'cc';
+
+export const ORIGINAL_WHITE_COLOR = new Color(255, 255, 255, 255);
+export const ORIGINAL_ASH_COLOR = new Color(140, 140, 140, 255);
 
 export function formatSourceInteger(value: unknown): string {
   const numericValue = Number(value);
@@ -18,6 +33,45 @@ export function truncateSourceDisplayName(value: unknown, maxDisplayUnits: numbe
     consumedUnits += characterUnits;
   }
   return `${truncatedText}...`;
+}
+
+/** Exact 2.4 Utils.goldFormat semantics used by the original DZPK labels. */
+export function formatOriginalGold(
+  value: unknown,
+  tenThousandDecimals = 1,
+  hundredMillionDecimals = 3,
+): string {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return '0';
+  if (amount < 10_000) return String(amount);
+  if (amount < 100_000_000) {
+    return `${roundFixed(amount / 10_000, tenThousandDecimals)}万`;
+  }
+  return `${roundFixed(amount / 100_000_000, hundredMillionDecimals)}亿`;
+}
+
+export function hideOriginalChildNodes(parentNode: Node | null): void {
+  parentNode?.children.forEach((childNode) => { childNode.active = false; });
+}
+
+export function setOriginalNodeColor(targetNode: Node, color: Readonly<Color>): void {
+  const sprite = targetNode.getComponent(Sprite);
+  if (sprite) sprite.color = new Color(color);
+  const label = targetNode.getComponent(Label);
+  if (label) label.color = new Color(color);
+  const skeleton = targetNode.getComponent(sp.Skeleton);
+  if (skeleton) skeleton.color = new Color(color);
+  targetNode.children.forEach((childNode) => setOriginalNodeColor(childNode, color));
+}
+
+/** Converts the source node anchor position into the target node's local space. */
+export function convertNodeOriginToLocal(sourceNode: Node, targetNode: Node): Vec3 {
+  const sourceTransform = sourceNode.getComponent(UITransform);
+  const targetTransform = targetNode.getComponent(UITransform);
+  if (!sourceTransform || !targetTransform) {
+    throw new Error(`UITransform missing for coordinate conversion: ${sourceNode.name} -> ${targetNode.name}`);
+  }
+  return targetTransform.convertToNodeSpaceAR(sourceTransform.convertToWorldSpaceAR(Vec3.ZERO));
 }
 
 export function applyNodeOpacity(targetNode: Node, opacity: number): void {
@@ -73,4 +127,10 @@ function displayUnitLength(sourceText: string): number {
     ) ? 1 : 2;
   }
   return displayUnits;
+}
+
+function roundFixed(value: number, decimalPlaces: number): string {
+  const safeDecimalPlaces = Math.max(0, Math.floor(decimalPlaces));
+  const multiplier = 10 ** safeDecimalPlaces;
+  return (Math.round(value * multiplier) / multiplier).toFixed(safeDecimalPlaces);
 }
