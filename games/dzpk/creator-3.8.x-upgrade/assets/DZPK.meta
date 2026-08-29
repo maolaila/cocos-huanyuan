@@ -5,5 +5,10 @@
   "uuid": "a84f47a1-86f4-4c4e-86dc-4b6aa21c9a6b",
   "files": [],
   "subMetas": {},
-  "userData": {}
+  "userData": {
+    "isBundle": true,
+    "bundleConfigID": "default",
+    "bundleName": "DZPK",
+    "priority": 1
+  }
 }

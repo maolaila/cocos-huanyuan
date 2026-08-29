@@ -7,16 +7,22 @@ export interface AuthenticatedGameContext {
   mode: 'TRIAL' | 'REAL';
   sessionId: string;
   sessionToken?: string;
+  walletMode?: 'SINGLE' | 'TRANSFER' | null;
+  currency?: string;
   platformPlayerId?: string | number | null;
   merchantPlayerId?: string | null;
-  wallet: { mainBalance: number | string };
+  wallet: {
+    mainBalance: number | string;
+    gameBalance?: number | string | null;
+  };
   sdkConfig: { postMessageTargetOrigin?: string | null };
 }
 
 export interface ViewerProfile {
   uid: number;
   rid: string | number | null;
-  gold: number;
+  /** Exact GameHub wallet text in the room view; source table events remain integer chips. */
+  gold: number | string;
   bank: number;
   headimgurl: number | string;
   nickname: string;
@@ -75,7 +81,12 @@ export class GameContext {
     this.viewerProfile.uid = Number.isSafeInteger(numericSourceUid) && numericSourceUid > 0
       ? numericSourceUid
       : deriveStableSourceUid(String(sourceIdentity));
-    this.viewerProfile.gold = normalizeSourceChipAmount(authenticatedContext.wallet.mainBalance);
+    const effectiveBalance = authenticatedContext.walletMode === 'TRANSFER'
+      ? (authenticatedContext.wallet.gameBalance ?? authenticatedContext.wallet.mainBalance)
+      : authenticatedContext.wallet.mainBalance;
+    // The KG table protocol is integer-chip based, but a GameHub wallet is decimal(20,6).
+    // Keep the authenticated wallet fact exact until a source table snapshot supplies chips.
+    this.viewerProfile.gold = normalizeGameHubWalletBalance(effectiveBalance);
     this.viewerProfile.nickname = String(
       authenticatedContext.merchantPlayerId
       ?? authenticatedContext.platformPlayerId
@@ -127,6 +138,11 @@ function normalizeSourceChipAmount(chipAmount: unknown): number {
   const numericChipAmount = Number(chipAmount);
   if (!Number.isFinite(numericChipAmount) || numericChipAmount < 0) return 0;
   return Math.floor(numericChipAmount);
+}
+
+function normalizeGameHubWalletBalance(walletBalance: unknown): string {
+  const normalizedText = String(walletBalance ?? '').trim();
+  return /^(?:0|[1-9]\d*)(?:\.\d{1,6})?$/.test(normalizedText) ? normalizedText : '0';
 }
 
 function deriveStableSourceUid(identityText: string): number {

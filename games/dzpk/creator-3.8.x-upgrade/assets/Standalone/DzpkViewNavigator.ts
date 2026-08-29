@@ -61,13 +61,18 @@ export class DzpkViewNavigator {
     }
   }
 
-  public returnToRoomFromTable(viewerGoldAmount?: number): void {
+  public returnToRoomFromTable(viewerGoldAmount?: string): void {
     this.audioService.stopAllEffects();
     this.popupRootNode.destroyAllChildren();
-    if (typeof viewerGoldAmount === 'number') this.gameContext.setKey('gold', viewerGoldAmount);
+    if (viewerGoldAmount !== undefined) this.gameContext.setKey('gold', viewerGoldAmount);
     this.gameRootNode.destroyAllChildren();
     this.gameRootNode.active = false;
     this.roomRootNode.active = true;
+    // RoomInfo hides the original Room prefab while the table is visible.
+    // Reactivating only the container leaves an empty gray canvas.
+    this.roomRootNode.children.forEach((roomChildNode) => {
+      roomChildNode.active = true;
+    });
     this.eventBus.publishSourceEvent('local_Event', 'up_Gold');
   }
 

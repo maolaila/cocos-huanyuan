@@ -5,7 +5,6 @@ import {
   Sprite,
   SpriteAtlas,
   UIOpacity,
-  UITransform,
   Vec3,
   assetManager,
   isValid,
@@ -19,6 +18,11 @@ export function formatSourceInteger(value: unknown): string {
   const numericValue = Number(value);
   if (!Number.isFinite(numericValue)) return '0';
   return Math.floor(numericValue).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+/** Original KG lobby style: the client displays whole chips; GameHub keeps exact money server-side. */
+export function formatSourceWalletBalance(value: unknown): string {
+  return formatSourceInteger(value);
 }
 
 export function truncateSourceDisplayName(value: unknown, maxDisplayUnits: number): string {
@@ -66,12 +70,11 @@ export function setOriginalNodeColor(targetNode: Node, color: Readonly<Color>): 
 
 /** Converts the source node anchor position into the target node's local space. */
 export function convertNodeOriginToLocal(sourceNode: Node, targetNode: Node): Vec3 {
-  const sourceTransform = sourceNode.getComponent(UITransform);
-  const targetTransform = targetNode.getComponent(UITransform);
-  if (!sourceTransform || !targetTransform) {
-    throw new Error(`UITransform missing for coordinate conversion: ${sourceNode.name} -> ${targetNode.name}`);
-  }
-  return targetTransform.convertToNodeSpaceAR(sourceTransform.convertToWorldSpaceAR(Vec3.ZERO));
+  const sourceWorldPosition = sourceNode.worldPosition;
+  return targetNode.inverseTransformPoint(
+    new Vec3(),
+    new Vec3(sourceWorldPosition.x, sourceWorldPosition.y, sourceWorldPosition.z),
+  );
 }
 
 export function applyNodeOpacity(targetNode: Node, opacity: number): void {

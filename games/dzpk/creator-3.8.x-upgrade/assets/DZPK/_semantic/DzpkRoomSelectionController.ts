@@ -17,6 +17,7 @@ import { SourceEnvelope } from '../../Standalone/SourceProtocolAdapter';
 import {
   applyNodeOpacity,
   formatSourceInteger,
+  formatSourceWalletBalance,
   setOriginalAvatar,
   truncateSourceDisplayName,
 } from '../../Standalone/DzpkUiHelpers';
@@ -25,6 +26,7 @@ const { ccclass, property } = _decorator;
 const LOCAL_SOURCE_EVENT = 'local_Event';
 const VIEWER_BALANCE_CHANGED_EVENT = 'up_Gold';
 const SOURCE_ENTER_ROOM_EVENT = 'Msg_Hall_EnterRoom';
+const SOURCE_FINISH_LOAD_EVENT = 'Msg_Hall_FinishLoad';
 const SOURCE_ROOM_INFORMATION_EVENT = 'Msg_DZPK_RoomInfo';
 const ORIGINAL_RULE_PREFAB_PATH = 'prefab/Rule';
 const ROOM_ENTRY_TIMEOUT_SECONDS = 20;
@@ -65,7 +67,7 @@ export class DzpkRoomSelectionController extends Component {
       eventBus.unsubscribeSourceEvent(subscription);
     });
     this.sourceSubscriptions.length = 0;
-    this.roomChoiceContainer?.children.forEach((roomChoiceNode) => {
+    this.roomChoiceContainer?.children?.forEach((roomChoiceNode) => {
       roomChoiceNode.off(Button.EventType.CLICK, this.handleRoomChoiceButtonPressed, this);
     });
   }
@@ -92,7 +94,7 @@ export class DzpkRoomSelectionController extends Component {
     const { gameContext } = requireDzpkRuntimeServices();
     if (gameContext.isReconnect) return;
     if (this.viewerGoldLabel) {
-      this.viewerGoldLabel.string = formatSourceInteger(gameContext.getKey('gold'));
+      this.viewerGoldLabel.string = formatSourceWalletBalance(gameContext.getKey('gold'));
     }
     this.playOriginalRoomEntranceAnimation();
   }
@@ -101,7 +103,7 @@ export class DzpkRoomSelectionController extends Component {
     if (sourceEventName !== VIEWER_BALANCE_CHANGED_EVENT) return;
     const { gameContext } = requireDzpkRuntimeServices();
     if (this.viewerGoldLabel) {
-      this.viewerGoldLabel.string = formatSourceInteger(gameContext.getKey('gold'));
+      this.viewerGoldLabel.string = formatSourceWalletBalance(gameContext.getKey('gold'));
     }
     if (this.viewerBankGoldLabel) {
       this.viewerBankGoldLabel.string = formatSourceInteger(gameContext.getKey('bank'));
@@ -240,9 +242,9 @@ export class DzpkRoomSelectionController extends Component {
     this.requestOriginalRoomEntry(highestAffordableRoomLevel);
   }
 
-  public handleRoomChoiceButtonPressed(buttonEvent: Event): void {
+  public handleRoomChoiceButtonPressed(clickedButton: Button): void {
     requireDzpkRuntimeServices().audioService.playButtonSound();
-    const selectedRoomLevel = Number((buttonEvent.currentTarget as Node | null)?.name) + 1;
+    const selectedRoomLevel = Number(clickedButton.node.name) + 1;
     this.requestOriginalRoomEntry(selectedRoomLevel);
   }
 
@@ -272,10 +274,15 @@ export class DzpkRoomSelectionController extends Component {
   }
 
   private async instantiateOriginalMainTable(): Promise<void> {
-    const { gameContext, resourceLoader, viewNavigator } = requireDzpkRuntimeServices();
+    const { authenticatedTransport, gameContext, resourceLoader, viewNavigator } =
+      requireDzpkRuntimeServices();
     viewNavigator.displayOriginalTablePrefab(
       await resourceLoader.loadOriginalPrefab(gameContext.getGame().prefabUrl),
     );
+    // Original PokerBase.onLoad notifies Hall only after DZPKMain exists.
+    authenticatedTransport.sendSourceEvent(SOURCE_FINISH_LOAD_EVENT, {
+      rid: gameContext.roomID,
+    });
   }
 }
 

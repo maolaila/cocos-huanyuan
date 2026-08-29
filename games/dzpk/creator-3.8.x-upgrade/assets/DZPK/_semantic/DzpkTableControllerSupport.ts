@@ -215,6 +215,17 @@ export function nonNegativeChipAmount(value: unknown): number {
   return Number.isFinite(numericValue) && numericValue >= 0 ? Math.floor(numericValue) : 0;
 }
 
+export function canonicalNonNegativeWalletAmount(value: unknown): string {
+  const raw = typeof value === 'number' && Number.isFinite(value)
+    ? value.toFixed(6)
+    : String(value ?? '').trim();
+  const match = /^(\d+)(?:\.(\d{1,6}))?$/.exec(raw);
+  if (!match || Number(match[1]) > Number.MAX_SAFE_INTEGER) {
+    throw new Error('DZPK wallet balance projection is invalid');
+  }
+  return `${match[1]}.${(match[2] ?? '').padEnd(6, '0')}`;
+}
+
 export function positiveChipAmountOrZero(value: unknown): number {
   const numericValue = Number(value);
   return Number.isFinite(numericValue) && numericValue > 0 ? Math.floor(numericValue) : 0;

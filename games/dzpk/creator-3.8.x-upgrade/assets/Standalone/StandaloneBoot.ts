@@ -1,7 +1,9 @@
 import {
+  Camera,
   Component,
   Game,
   Label,
+  Layers,
   ResolutionPolicy,
   _decorator,
   game,
@@ -101,6 +103,16 @@ export class DzpkStandaloneBoot extends Component {
   }
 
   private configureOriginalLandscapeCanvas(): void {
+    const camera = this.node.getChildByName('Main Camera')?.getComponent(Camera);
+    if (!camera) throw new Error('Boot scene is missing the original 2D Camera');
+    // Official Creator 3.8 empty-2d visibility: DEFAULT + IGNORE_RAYCAST + UI_2D.
+    camera.visibility = Layers.makeMaskInclude([
+      Layers.Enum.DEFAULT,
+      Layers.Enum.IGNORE_RAYCAST,
+      Layers.Enum.UI_2D,
+    ]);
+    camera.projection = Camera.ProjectionType.ORTHO;
+    camera.orthoHeight = 375;
     view.setDesignResolutionSize(1334, 750, ResolutionPolicy.SHOW_ALL);
     game.frameRate = 60;
     macro.ENABLE_MULTI_TOUCH = false;

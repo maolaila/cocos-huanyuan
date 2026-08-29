@@ -3,6 +3,9 @@ import path from 'node:path';
 
 const UI_2D_LAYER = 1 << 25;
 const DEFAULT_LAYER = 1 << 30;
+// Creator 3.8.8 official empty-2d Camera mask: DEFAULT + IGNORE_RAYCAST + UI_2D.
+const OFFICIAL_2D_CAMERA_VISIBILITY = 1108344832;
+const OFFICIAL_2D_CAMERA_PROJECTION = 0;
 
 // These Cocos 3.x components require a UITransform on the same node.
 const UI_COMPONENT_TYPES = new Set([
@@ -156,7 +159,22 @@ function normalizeSerializedAsset(serializedObjects, extension) {
   }
 
   const layerChanges = [];
+  const cameraVisibilityChanges = [];
+  const cameraProjectionChanges = [];
+  const spinePremultipliedAlphaChanges = [];
   const addedUiTransforms = [];
+
+  for (let index = 0; index < serializedObjects.length; index += 1) {
+    const component = serializedObjects[index];
+    if (component?.__type__ !== 'sp.Skeleton') continue;
+    const hasLegacyPremultipliedAlpha = Object.hasOwn(component, 'premultipliedAlpha');
+    if (component._premultipliedAlpha === false && !hasLegacyPremultipliedAlpha) continue;
+    spinePremultipliedAlphaChanges.push({ componentIndex: index });
+    // KG's source atlases contain straight-alpha textures. Treating them as
+    // premultiplied in Creator 3.8 produces opaque white attachment regions.
+    component._premultipliedAlpha = false;
+    delete component.premultipliedAlpha;
+  }
 
   for (const nodeIndex of nodeIndexes) {
     const node = serializedObjects[nodeIndex];
@@ -167,6 +185,29 @@ function normalizeSerializedAsset(serializedObjects, extension) {
     if (node._layer !== desiredLayer) {
       layerChanges.push({ nodeIndex, nodeName: node._name, previousLayer: node._layer });
       node._layer = desiredLayer;
+    }
+
+    if (componentTypes.includes('cc.Camera') && uiLayerNodeIndexes.has(nodeIndex)) {
+      for (const componentReference of node._components ?? []) {
+        const camera = serializedObjects[componentReference?.__id__];
+        if (camera?.__type__ !== 'cc.Camera') continue;
+        if (camera._visibility !== OFFICIAL_2D_CAMERA_VISIBILITY) {
+          cameraVisibilityChanges.push({
+            nodeIndex,
+            nodeName: node._name,
+            previousVisibility: camera._visibility,
+          });
+          camera._visibility = OFFICIAL_2D_CAMERA_VISIBILITY;
+        }
+        if (camera._projection !== OFFICIAL_2D_CAMERA_PROJECTION) {
+          cameraProjectionChanges.push({
+            nodeIndex,
+            nodeName: node._name,
+            previousProjection: camera._projection,
+          });
+          camera._projection = OFFICIAL_2D_CAMERA_PROJECTION;
+        }
+      }
     }
 
     const requiresUiTransform = componentTypes.some((componentType) => UI_COMPONENT_TYPES.has(componentType));
@@ -185,7 +226,13 @@ function normalizeSerializedAsset(serializedObjects, extension) {
     });
   }
 
-  return { layerChanges, addedUiTransforms };
+  return {
+    layerChanges,
+    cameraVisibilityChanges,
+    cameraProjectionChanges,
+    spinePremultipliedAlphaChanges,
+    addedUiTransforms,
+  };
 }
 
 async function main() {
@@ -200,7 +247,13 @@ async function main() {
     const changes = normalizeSerializedAsset(serializedObjects, path.extname(assetPath));
     const relativePath = path.relative(projectPath, assetPath).replaceAll('\\', '/');
 
-    if (changes.layerChanges.length || changes.addedUiTransforms.length) {
+    if (
+      changes.layerChanges.length
+      || changes.cameraVisibilityChanges.length
+      || changes.cameraProjectionChanges.length
+      || changes.spinePremultipliedAlphaChanges.length
+      || changes.addedUiTransforms.length
+    ) {
       plannedWrites.push({
         assetPath,
         relativePath,
@@ -212,7 +265,7 @@ async function main() {
 
   for (const plan of plannedWrites) {
     process.stdout.write(
-      `${plan.relativePath}: layerChanges=${plan.layerChanges.length}, addedUiTransforms=${plan.addedUiTransforms.length}\n`,
+      `${plan.relativePath}: layerChanges=${plan.layerChanges.length}, cameraVisibilityChanges=${plan.cameraVisibilityChanges.length}, cameraProjectionChanges=${plan.cameraProjectionChanges.length}, spinePremultipliedAlphaChanges=${plan.spinePremultipliedAlphaChanges.length}, addedUiTransforms=${plan.addedUiTransforms.length}\n`,
     );
     for (const addition of plan.addedUiTransforms) {
       process.stdout.write(
@@ -222,9 +275,21 @@ async function main() {
   }
 
   const totalLayerChanges = plannedWrites.reduce((sum, plan) => sum + plan.layerChanges.length, 0);
+  const totalCameraVisibilityChanges = plannedWrites.reduce(
+    (sum, plan) => sum + plan.cameraVisibilityChanges.length,
+    0,
+  );
+  const totalCameraProjectionChanges = plannedWrites.reduce(
+    (sum, plan) => sum + plan.cameraProjectionChanges.length,
+    0,
+  );
+  const totalSpinePremultipliedAlphaChanges = plannedWrites.reduce(
+    (sum, plan) => sum + plan.spinePremultipliedAlphaChanges.length,
+    0,
+  );
   const totalUiTransforms = plannedWrites.reduce((sum, plan) => sum + plan.addedUiTransforms.length, 0);
   process.stdout.write(
-    `summary: assets=${serializedAssets.length}, filesChanged=${plannedWrites.length}, layerChanges=${totalLayerChanges}, addedUiTransforms=${totalUiTransforms}, mode=${applyChanges ? 'apply' : 'plan'}\n`,
+    `summary: assets=${serializedAssets.length}, filesChanged=${plannedWrites.length}, layerChanges=${totalLayerChanges}, cameraVisibilityChanges=${totalCameraVisibilityChanges}, cameraProjectionChanges=${totalCameraProjectionChanges}, spinePremultipliedAlphaChanges=${totalSpinePremultipliedAlphaChanges}, addedUiTransforms=${totalUiTransforms}, mode=${applyChanges ? 'apply' : 'plan'}\n`,
   );
 
   if (applyChanges) {

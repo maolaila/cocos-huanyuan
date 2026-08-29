@@ -373,11 +373,15 @@ export class DzpkTablePresentation extends Component {
   ): void {
     const actionControlRoot = requireChild(this.node, 'btn');
     actionControlRoot.active = true;
-    hideOriginalChildNodes(actionControlRoot);
+    actionControlRoot.children.forEach((childNode) => {
+      childNode.active = false;
+      setControlTreeInteractable(childNode, false);
+    });
     if (!controlNodeName) return;
     const selectedControlNode = actionControlRoot.getChildByName(controlNodeName);
     if (!selectedControlNode) return;
     selectedControlNode.active = true;
+    setControlTreeInteractable(selectedControlNode, true);
     if (controlNodeName !== 'bet') return;
 
     const viewerStackChips = tableStateModel.viewerParticipant?.stackChips ?? 0;
@@ -994,4 +998,13 @@ export class DzpkTablePresentation extends Component {
     if (!this.chipNodePool) throw new Error('DZPK chip pool is not initialized');
     return this.chipNodePool;
   }
+}
+
+function setControlTreeInteractable(rootNode: Node, interactable: boolean): void {
+  rootNode.getComponentsInChildren(Button).forEach((button) => {
+    button.interactable = interactable;
+  });
+  rootNode.getComponentsInChildren(Toggle).forEach((toggle) => {
+    toggle.interactable = interactable;
+  });
 }

@@ -698,13 +698,13 @@
     "defaultAnimation": "",
     "_sockets": [],
     "_debugMesh": false,
-    "premultipliedAlpha": false,
     "_animationName": "animation",
     "_materials": [
       {
         "__uuid__": "7afd064b-113f-480e-b793-8817d19f63c3"
       }
-    ]
+    ],
+    "_premultipliedAlpha": false
   },
   {
     "__type__": "cc.CompPrefabInfo",
@@ -831,13 +831,13 @@
     "defaultAnimation": "",
     "_sockets": [],
     "_debugMesh": false,
-    "premultipliedAlpha": false,
     "_animationName": "animation",
     "_materials": [
       {
         "__uuid__": "7afd064b-113f-480e-b793-8817d19f63c3"
       }
-    ]
+    ],
+    "_premultipliedAlpha": false
   },
   {
     "__type__": "cc.CompPrefabInfo",
@@ -964,13 +964,13 @@
     "defaultAnimation": "",
     "_sockets": [],
     "_debugMesh": false,
-    "premultipliedAlpha": false,
     "_animationName": "animation",
     "_materials": [
       {
         "__uuid__": "7afd064b-113f-480e-b793-8817d19f63c3"
       }
-    ]
+    ],
+    "_premultipliedAlpha": false
   },
   {
     "__type__": "cc.CompPrefabInfo",
@@ -1097,12 +1097,12 @@
     "defaultAnimation": "",
     "_sockets": [],
     "_debugMesh": false,
-    "premultipliedAlpha": false,
     "_materials": [
       {
         "__uuid__": "7afd064b-113f-480e-b793-8817d19f63c3"
       }
-    ]
+    ],
+    "_premultipliedAlpha": false
   },
   {
     "__type__": "cc.CompPrefabInfo",
@@ -5682,13 +5682,13 @@
     "defaultAnimation": "animation",
     "_sockets": [],
     "_debugMesh": false,
-    "premultipliedAlpha": false,
     "_animationName": "animation",
     "_materials": [
       {
         "__uuid__": "7afd064b-113f-480e-b793-8817d19f63c3"
       }
-    ]
+    ],
+    "_premultipliedAlpha": false
   },
   {
     "__type__": "cc.CompPrefabInfo",
@@ -8968,13 +8968,13 @@
     "defaultAnimation": "animation",
     "_sockets": [],
     "_debugMesh": false,
-    "premultipliedAlpha": false,
     "_animationName": "animation",
     "_materials": [
       {
         "__uuid__": "7afd064b-113f-480e-b793-8817d19f63c3"
       }
-    ]
+    ],
+    "_premultipliedAlpha": false
   },
   {
     "__type__": "cc.CompPrefabInfo",
@@ -11198,13 +11198,13 @@
     "defaultAnimation": "animation",
     "_sockets": [],
     "_debugMesh": false,
-    "premultipliedAlpha": false,
     "_animationName": "animation",
     "_materials": [
       {
         "__uuid__": "7afd064b-113f-480e-b793-8817d19f63c3"
       }
-    ]
+    ],
+    "_premultipliedAlpha": false
   },
   {
     "__type__": "cc.CompPrefabInfo",
@@ -13428,13 +13428,13 @@
     "defaultAnimation": "animation",
     "_sockets": [],
     "_debugMesh": false,
-    "premultipliedAlpha": false,
     "_animationName": "animation",
     "_materials": [
       {
         "__uuid__": "7afd064b-113f-480e-b793-8817d19f63c3"
       }
-    ]
+    ],
+    "_premultipliedAlpha": false
   },
   {
     "__type__": "cc.CompPrefabInfo",
@@ -15658,13 +15658,13 @@
     "defaultAnimation": "animation",
     "_sockets": [],
     "_debugMesh": false,
-    "premultipliedAlpha": false,
     "_animationName": "animation",
     "_materials": [
       {
         "__uuid__": "7afd064b-113f-480e-b793-8817d19f63c3"
       }
-    ]
+    ],
+    "_premultipliedAlpha": false
   },
   {
     "__type__": "cc.CompPrefabInfo",
@@ -17888,13 +17888,13 @@
     "defaultAnimation": "animation",
     "_sockets": [],
     "_debugMesh": false,
-    "premultipliedAlpha": false,
     "_animationName": "animation",
     "_materials": [
       {
         "__uuid__": "7afd064b-113f-480e-b793-8817d19f63c3"
       }
-    ]
+    ],
+    "_premultipliedAlpha": false
   },
   {
     "__type__": "cc.CompPrefabInfo",
@@ -19361,12 +19361,12 @@
     "defaultAnimation": "",
     "_sockets": [],
     "_debugMesh": false,
-    "premultipliedAlpha": false,
     "_materials": [
       {
         "__uuid__": "7afd064b-113f-480e-b793-8817d19f63c3"
       }
-    ]
+    ],
+    "_premultipliedAlpha": false
   },
   {
     "__type__": "cc.CompPrefabInfo",
@@ -19681,13 +19681,13 @@
     "defaultAnimation": "",
     "_sockets": [],
     "_debugMesh": false,
-    "premultipliedAlpha": false,
     "_animationName": "animation",
     "_materials": [
       {
         "__uuid__": "7afd064b-113f-480e-b793-8817d19f63c3"
       }
-    ]
+    ],
+    "_premultipliedAlpha": false
   },
   {
     "__type__": "cc.CompPrefabInfo",
@@ -19946,13 +19946,13 @@
     "defaultAnimation": "",
     "_sockets": [],
     "_debugMesh": false,
-    "premultipliedAlpha": false,
     "_animationName": "animation",
     "_materials": [
       {
         "__uuid__": "7afd064b-113f-480e-b793-8817d19f63c3"
       }
-    ]
+    ],
+    "_premultipliedAlpha": false
   },
   {
     "__type__": "cc.CompPrefabInfo",
@@ -21480,12 +21480,12 @@
     "defaultAnimation": "",
     "_sockets": [],
     "_debugMesh": false,
-    "premultipliedAlpha": false,
     "_materials": [
       {
         "__uuid__": "7afd064b-113f-480e-b793-8817d19f63c3"
       }
-    ]
+    ],
+    "_premultipliedAlpha": false
   },
   {
     "__type__": "cc.CompPrefabInfo",
@@ -23125,13 +23125,13 @@
     "defaultAnimation": "animation",
     "_sockets": [],
     "_debugMesh": false,
-    "premultipliedAlpha": false,
     "_animationName": "animation",
     "_materials": [
       {
         "__uuid__": "7afd064b-113f-480e-b793-8817d19f63c3"
       }
-    ]
+    ],
+    "_premultipliedAlpha": false
   },
   {
     "__type__": "cc.CompPrefabInfo",
@@ -23258,12 +23258,12 @@
     "defaultAnimation": "",
     "_sockets": [],
     "_debugMesh": false,
-    "premultipliedAlpha": false,
     "_materials": [
       {
         "__uuid__": "7afd064b-113f-480e-b793-8817d19f63c3"
       }
-    ]
+    ],
+    "_premultipliedAlpha": false
   },
   {
     "__type__": "cc.CompPrefabInfo",
@@ -32923,13 +32923,13 @@
     "defaultAnimation": "animation",
     "_sockets": [],
     "_debugMesh": false,
-    "premultipliedAlpha": false,
     "_animationName": "animation",
     "_materials": [
       {
         "__uuid__": "7afd064b-113f-480e-b793-8817d19f63c3"
       }
-    ]
+    ],
+    "_premultipliedAlpha": false
   },
   {
     "__type__": "cc.CompPrefabInfo",
@@ -37746,13 +37746,13 @@
     "defaultAnimation": "start",
     "_sockets": [],
     "_debugMesh": false,
-    "premultipliedAlpha": false,
     "_animationName": "start",
     "_materials": [
       {
         "__uuid__": "7afd064b-113f-480e-b793-8817d19f63c3"
       }
-    ]
+    ],
+    "_premultipliedAlpha": false
   },
   {
     "__type__": "cc.CompPrefabInfo",
@@ -43422,13 +43422,13 @@
     "defaultAnimation": "animation",
     "_sockets": [],
     "_debugMesh": false,
-    "premultipliedAlpha": false,
     "_animationName": "animation",
     "_materials": [
       {
         "__uuid__": "7afd064b-113f-480e-b793-8817d19f63c3"
       }
-    ]
+    ],
+    "_premultipliedAlpha": false
   },
   {
     "__type__": "cc.CompPrefabInfo",

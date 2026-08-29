@@ -277,7 +277,7 @@ transport/authority 必须用于幂等、乱序和重连。客户端 envelope �
 | `Msg_Hall_EnterRoom` | `DZPKRoom.enterRoom` | `{tableid:0,gtype:19,level}` | reserve room/seat | min/max、容量、身份、room version | `PlannedLaterPhase` | 快速开始、指定 level、房满、余额不足、重试幂等 |
 | `Msg_Hall_FinishLoad` | `PokerBase.m_init` | `{rid}` | activate/rebind；触发 RoomInfo | 必须先回 FinishLoad success，再发送 viewer RoomInfo | `PlannedLaterPhase` | 首进、刷新、断线重连、错误 rid、旧 connection fence |
 | `Msg_DZPK_ActBet` | `sendMsgActBet` | `{gold}`，本次增量；负数弃牌 | 转换为语义动作 command | actor/seat/hand/revision/clientActionId/legal action/余额全部校验 | `SourceDefectRepair` | 见动作矩阵；非法请求状态不变并重新投影合法按钮 |
-| `Msg_DZPK_Out` | `requestReturnToRoomSelection`（兼容 `PokerBase.m_quitGame`） | `[]` | leave-table intent | 进行中且未弃牌不能返回；成功响应调用 `wViewMgr.quitGame`，独立 navigator 显示原 Room；Room exit 才结束游戏 | `IntentionalDifferenceWithAuthorityReason`：移除后来添加的浏览器 confirm，保留原 source event | 当前源码逻辑已核对；视觉/交互交给人工复核 |
+| `Msg_DZPK_Out` | `requestReturnToRoomSelection`（兼容 `PokerBase.m_quitGame`） | `[]` | leave-table intent | Phase A study 在进行中且未弃牌时拒绝；后继 GameHub REAL authority 在下一合法动作自动折牌并先完成资金结算，再发 Out、显示原 Room；Room exit 才结束游戏 | `IntentionalDifferenceWithAuthorityReason`：移除后来添加的浏览器 confirm；REAL 增加安全终局，不绕过原 source event | Phase A 源码逻辑已核对；3.8 REAL 进行中返回、LEFT authority、play-lock release 与 Room 视觉已实机通过 |
 | 本地自动动作 | `autoList` 三项 | 不发独立 server trustee 消息 | 到本人回合时客户端仍只提交普通 ActBet intent | 服务端仍做全部合法性与 timeout | `Match`（原脚本） | 让或弃、自动让牌、跟任何注；刷新后不把本地 auto 当服务端事实 |
 
 ## 7. 服务端发送事件矩阵
@@ -297,7 +297,7 @@ transport/authority 必须用于幂等、乱序和重连。客户端 envelope �
 | `Msg_DZPK_PublicCards` | `cards,px`；可扩展 board/handId/revision | 公牌动画和本人牌型提示 | `px` 只允许 `{viewerUid: legacyString}` | `SourceDefectRepair` | flop/turn/river、all-in runout、六 viewer privacy |
 | `Msg_DZPK_Result` | 原 scalar + 窄扩展，见结算节 | 摊牌、赢家、筹码、余额、15 秒 | terminal settlement 唯一事实；结果重播不得再次入账 | `SourceDefectRepair` | single/tie/side/odd/uncalled/rake、重复 Result、RESULT 重连 |
 | `Msg_DZPK_ChangGold` | `uid,gold` | 更新座位显示 | 只投影已提交钱包/桌台变化 | `PlannedLaterPhase` | 外部余额变化不能在一手中途篡改 reserved table stack |
-| `Msg_DZPK_Out` | `uid,gold` | 删除座位；本人退出 Main | 公开 leave；gold 是最终 viewer projection | `PlannedLaterPhase` | bot replacement、真人退出、房间空关闭 |
+| `Msg_DZPK_Out` | `uid,gold` | 删除座位；本人退出 Main | 公开 leave；TRIAL gold 为 study stack；REAL 必须在终局结算后从 GameHub wallet authority 投影，禁止把房间上限内 table stack 当总余额 | `IntentionalDifferenceWithAuthorityReason`（GameHub 钱包边界）；3.8 REAL `Match` | bot replacement；进行中真人退出；Room 显示与 wallet/order/ledger 同点对账 |
 
 ## 8. RoomInfo 快照合同
 
@@ -635,6 +635,8 @@ no client NEXT_HAND request exists
 | RESULT 快照/重播 | `IntentionalDifferenceWithAuthorityReason` | 原 RoomInfo 缺 RESULT 恢复；GameHub 必须支持刷新 | stage3 重连空白或重新结算 |
 | StandaloneBoot 替代 Hall UI | `IntentionalDifferenceWithAuthorityReason` | 用户批准独立原版工程；禁止 Hall/充值/代理入口 | 自绘 Load/Room/Main 或重新引入完整 Hall |
 | Phase A 只允许 TRIAL | `IntentionalDifferenceWithAuthorityReason` | 正式 staged money authority 尚不存在 | 客户端参数强开 REAL |
+| GameHub REAL 进行中 Out 自动折牌并结算 | `IntentionalDifferenceWithAuthorityReason` | 防止 OPEN hand/资金单元和绕过钱包；完成后仍走原 `Msg_DZPK_Out` 返回 Room | 直接删桌、只改前端画面或未结算就释放 play lock |
+| GameHub REAL Out gold 来自 wallet | `IntentionalDifferenceWithAuthorityReason` | table stack 受房间上限截断，不等于平台总余额 | 把 viewer stack、hold 或 locked amount 回填成 Room 总金币 |
 | 删除两个无 target stale ClickEvent | `SourceDefectRepair` | 原序列化残留无有效 target | 复制 ERNN/BJL controller 或保留空点击错误 |
 | Bank 不接入 | `NotApplicable` | 源码存在但 DZPK 可达链明确 break/inactive | 为“功能齐全”开放银行/充值/提现 |
 

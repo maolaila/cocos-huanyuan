@@ -23,6 +23,7 @@ import {
   SOURCE_ACTION,
   SOURCE_STAGE,
   asSourceRecord,
+  canonicalNonNegativeWalletAmount,
   createSettlementPresentation,
   findParticipantByLocalSeat,
   identityListContains,
@@ -317,8 +318,8 @@ export class DzpkTableGameController extends Component {
   }
 
   private handleParticipantLeft(leavePayload: SourceRecord): Promise<unknown> {
-    return this.enqueuePresentationWork(() => {
-      const viewerLeft = sourceIdentityEquals(leavePayload.uid, this.viewerParticipantId());
+    const viewerLeft = sourceIdentityEquals(leavePayload.uid, this.viewerParticipantId());
+    const applyParticipantLeave = (): void => {
       if (viewerLeft) this.isRoomReturnPending = false;
       const participant = this.tableStateModel.findParticipantByIdIfPresent(leavePayload.uid);
       if (participant) {
@@ -330,11 +331,16 @@ export class DzpkTableGameController extends Component {
       }
       if (viewerLeft) {
         requireDzpkRuntimeServices().viewNavigator.returnToRoomFromTable(
-          nonNegativeChipAmount(leavePayload.gold),
+          canonicalNonNegativeWalletAmount(leavePayload.gold),
         );
       }
       this.renderSnapshotStatusTips();
-    });
+    };
+    // Leaving the table is a navigation boundary. Do not wait behind stale
+    // deal/action animations from the room being destroyed.
+    return viewerLeft
+      ? this.replacePresentationQueue(applyParticipantLeave)
+      : this.enqueuePresentationWork(applyParticipantLeave);
   }
 
   /** A FaCards event starts a server-owned hand; the client never requests one. */
@@ -819,7 +825,8 @@ export class DzpkTableGameController extends Component {
   public requestCheckAction(_event?: Event): boolean { return this.submitPlayerActionContribution(0); }
 
   public openRaiseSelection(_event?: Event): void {
-    const viewer = this.requireViewerParticipantForAction();
+    const viewer = this.viewerParticipantForActionIfEligible();
+    if (!viewer) return;
     const raisePresets = this.tableStateModel.calculateRaiseSelectionPresetContributions();
     this.requirePresentation().setRaiseSelectionVisible(
       true,
@@ -886,7 +893,8 @@ export class DzpkTableGameController extends Component {
     if (!Number.isSafeInteger(contribution) || contribution < -1) {
       throw new Error('DZPK action contribution must be an integer of at least -1');
     }
-    const viewer = this.requireViewerParticipantForAction();
+    const viewer = this.viewerParticipantForActionIfEligible();
+    if (!viewer) return false;
     if (contribution > viewer.stackChips) throw new Error('DZPK action contribution exceeds the viewer stack');
     if (this.isViewerActionSubmissionPending) return false;
     this.isViewerActionSubmissionPending = true;
@@ -907,20 +915,21 @@ export class DzpkTableGameController extends Component {
     }
   }
 
-  private requireViewerParticipantForAction(): DzpkParticipantState {
+  private viewerParticipantForActionIfEligible(): DzpkParticipantState | null {
     const viewer = this.tableStateModel.viewerParticipant;
     if (!viewer || !viewer.isParticipating || viewer.sourceActionCode === SOURCE_ACTION.FOLD) {
-      throw new Error('DZPK viewer is not eligible to act');
+      return null;
     }
+    const actionNotice = this.tableStateModel.currentActionNotice;
+    if (
+      !actionNotice ||
+      Array.isArray(actionNotice) ||
+      !sourceIdentityEquals(actionNotice.uid, viewer.participantId)
+    ) return null;
     return viewer;
   }
 
   public requestReturnToRoomSelection(_event?: Event): boolean {
-    const viewer = this.tableStateModel.viewerParticipant;
-    if (viewer?.isParticipating && viewer.sourceActionCode !== SOURCE_ACTION.FOLD) {
-      requireDzpkRuntimeServices().uiMessageService.showTips('游戏正在进行中！');
-      return false;
-    }
     if (this.isRoomReturnPending) return false;
     requireDzpkRuntimeServices().audioService.playCloseSound();
     this.isRoomReturnPending = true;

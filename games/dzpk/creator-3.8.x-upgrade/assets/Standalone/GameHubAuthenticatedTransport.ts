@@ -53,11 +53,20 @@ export class GameHubAuthenticatedTransport {
     const genericLaunchCredential = currentUrl.searchParams.get('token');
     const launchCode = currentUrl.searchParams.get('launchCode') ?? genericLaunchCredential;
     const launchToken = currentUrl.searchParams.get('launchToken');
-    const sessionToken = currentUrl.searchParams.get('sessionToken')
+    const explicitSessionToken = currentUrl.searchParams.get('sessionToken');
+    const sessionToken = explicitSessionToken
       ?? storedReconnectState?.sessionToken
       ?? null;
 
-    if (storedReconnectState?.roomId) {
+    // A new launch credential starts a new GameHub session. Only restore the
+    // previous room when this page is reopening the same session credential.
+    const shouldRestoreStoredRoom = Boolean(
+      storedReconnectState?.roomId
+      && !launchCode
+      && !launchToken
+      && (!explicitSessionToken || explicitSessionToken === storedReconnectState.sessionToken),
+    );
+    if (shouldRestoreStoredRoom && storedReconnectState) {
       this.reconnectRoomId = storedReconnectState.roomId;
       this.reconnectRoomLevel = storedReconnectState.roomLevel;
       this.gameContext.roomLevel = storedReconnectState.roomLevel ?? this.gameContext.roomLevel;
@@ -67,10 +76,10 @@ export class GameHubAuthenticatedTransport {
 
     const credentialRequest = launchCode
       ? { launchCode }
-      : sessionToken
-        ? { sessionToken }
-        : launchToken
-          ? { launchToken }
+      : launchToken
+        ? { launchToken }
+        : sessionToken
+          ? { sessionToken }
           : null;
     if (!credentialRequest) {
       throw new Error('URL 缺少 GameHub launchCode/launchToken');
@@ -89,14 +98,10 @@ export class GameHubAuthenticatedTransport {
     if (authenticatedContext.gameCode !== DZPK_GAME_CODE) {
       throw new Error('GameHub context gameCode 不是 dzpk-955');
     }
-    if (authenticatedContext.mode !== 'TRIAL') {
-      throw new Error('Creator 3.8 升级阶段仅允许 TRIAL 会话');
-    }
-
     this.sessionCredential = authenticatedContext.sessionToken
-      ?? sessionToken
       ?? launchToken
       ?? launchCode
+      ?? sessionToken
       ?? '';
     this.sessionId = authenticatedContext.sessionId;
     this.gameContext.applyAuthenticatedContext(authenticatedContext);
@@ -105,7 +110,7 @@ export class GameHubAuthenticatedTransport {
     return authenticatedContext;
   }
 
-  public connectAuthenticatedWebSocket(): Promise<SourceEnvelope> {
+  public connectAuthenticatedWebSocket(restoreRoomAfterConnect = false): Promise<SourceEnvelope> {
     this.shouldReconnect = true;
     return new Promise((resolve, reject) => {
       const connectionTimeout = setTimeout(() => {
@@ -140,7 +145,12 @@ export class GameHubAuthenticatedTransport {
         this.reconnectAttemptCount = 0;
         const hallConnected = this.waitForSourceEvent('Msg_Hall_Connect', 10_000);
         this.sendSourceEvent('Msg_Hall_Connect', { gtype: DZPK_CLIENT_GAME_ID });
-        hallConnected.then(resolve).catch(reject);
+        hallConnected.then((sourceEnvelope) => {
+          if (restoreRoomAfterConnect && this.reconnectRoomId !== null) {
+            this.sendSourceEvent('Msg_Hall_FinishLoad', { rid: this.reconnectRoomId });
+          }
+          resolve(sourceEnvelope);
+        }).catch(reject);
       };
     });
   }
@@ -180,7 +190,7 @@ export class GameHubAuthenticatedTransport {
 
   public restoreAuthenticatedConnection(): Promise<SourceEnvelope | void> {
     if (this.websocket?.readyState === WebSocket.OPEN) return Promise.resolve();
-    return this.connectAuthenticatedWebSocket();
+    return this.connectAuthenticatedWebSocket(true);
   }
 
   public closeAuthenticatedConnection(): void {
@@ -203,7 +213,7 @@ export class GameHubAuthenticatedTransport {
     this.reconnectAttemptCount += 1;
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
-      this.connectAuthenticatedWebSocket().catch((reconnectError) => {
+      this.connectAuthenticatedWebSocket(true).catch((reconnectError) => {
         this.uiMessageService.showTransientMessage(normalizeErrorMessage(reconnectError));
         if (this.shouldReconnect) this.scheduleAuthenticatedReconnect();
       });
