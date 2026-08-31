@@ -137,7 +137,9 @@ export class DzpkRoomSelectionController extends Component {
     if (this.node.parent) this.node.parent.active = false;
     if (!gameContext.isReconnect) return;
     gameContext.isReconnect = false;
-    this.node.parent?.destroyAllChildren();
+    // Keep the original Room prefab available for Msg_DZPK_Out navigation.
+    // A reconnect snapshot hides the same room tree; destroying it leaves only
+    // the gray boot Canvas when the player later returns from the table.
   }
 
   private playOriginalRoomEntranceAnimation(): void {

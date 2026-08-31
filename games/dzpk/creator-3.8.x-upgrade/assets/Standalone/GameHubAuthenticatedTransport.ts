@@ -4,6 +4,10 @@ import { SourceEnvelope, SourceProtocolAdapter } from './SourceProtocolAdapter';
 import { DzpkUiMessageService } from './DzpkUiMessageService';
 
 const DZPK_SESSION_RECONNECT_STORAGE_KEY = 'gamehub.dzpk.session-reconnect.v1';
+/** Local Creator/build default for the shared GameHub online-test backend. */
+const GAMEHUB_ONLINE_TEST_BACKEND_BASE_URL = 'https://54.46.108.233';
+/** Original KG NetNode sends Msg_Hall_Heart every five seconds. */
+const ORIGINAL_SOURCE_HEARTBEAT_INTERVAL_MS = 5_000;
 
 interface SessionReconnectState {
   backendBaseUrl: string;
@@ -25,9 +29,11 @@ export class GameHubAuthenticatedTransport {
   private sessionCredential = '';
   private sessionId = '';
   private websocket: WebSocket | null = null;
+  private connectionPromise: Promise<SourceEnvelope> | null = null;
   private requestSequence = 0;
   private shouldReconnect = true;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private sourceHeartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private reconnectAttemptCount = 0;
   private reconnectRoomId: string | number | null = null;
   private reconnectRoomLevel: number | null = null;
@@ -44,16 +50,21 @@ export class GameHubAuthenticatedTransport {
   public async initializeAuthenticatedSession(): Promise<AuthenticatedGameContext> {
     const currentUrl = new URL(window.location.href);
     const storedReconnectState = readSessionReconnectState();
-    this.backendBaseUrl = (
-      currentUrl.searchParams.get('backendUrl')
-      ?? storedReconnectState?.backendBaseUrl
-      ?? window.location.origin
-    ).replace(/\/$/, '');
-
     const genericLaunchCredential = currentUrl.searchParams.get('token');
     const launchCode = currentUrl.searchParams.get('launchCode') ?? genericLaunchCredential;
     const launchToken = currentUrl.searchParams.get('launchToken');
     const explicitSessionToken = currentUrl.searchParams.get('sessionToken');
+    const hasExplicitLaunchCredential = Boolean(
+      launchCode
+      || launchToken
+      || explicitSessionToken,
+    );
+    this.backendBaseUrl = (
+      currentUrl.searchParams.get('backendUrl')
+      ?? (!hasExplicitLaunchCredential ? storedReconnectState?.backendBaseUrl : null)
+      ?? GAMEHUB_ONLINE_TEST_BACKEND_BASE_URL
+    ).replace(/\/$/, '');
+
     const sessionToken = explicitSessionToken
       ?? storedReconnectState?.sessionToken
       ?? null;
@@ -111,17 +122,20 @@ export class GameHubAuthenticatedTransport {
   }
 
   public connectAuthenticatedWebSocket(restoreRoomAfterConnect = false): Promise<SourceEnvelope> {
+    if (this.connectionPromise) return this.connectionPromise;
     this.shouldReconnect = true;
-    return new Promise((resolve, reject) => {
-      const connectionTimeout = setTimeout(() => {
-        reject(new Error('GameHub KG websocket 连接超时'));
-      }, 10_000);
-      this.websocket = new WebSocket(createWebsocketUrl(
+    const connectionPromise = new Promise<SourceEnvelope>((resolve, reject) => {
+      const socket = new WebSocket(createWebsocketUrl(
         this.backendBaseUrl,
         this.sessionCredential,
         this.sessionId,
       ));
-      this.websocket.onmessage = (message) => {
+      this.websocket = socket;
+      const connectionTimeout = setTimeout(() => {
+        socket.close();
+        reject(new Error('GameHub KG websocket 连接超时'));
+      }, 10_000);
+      socket.onmessage = (message) => {
         if (typeof message.data !== 'string') {
           this.uiMessageService.showTransientMessage('KG websocket 返回了非文本帧');
           return;
@@ -132,36 +146,70 @@ export class GameHubAuthenticatedTransport {
           this.uiMessageService.showTransientMessage(normalizeErrorMessage(protocolError));
         }
       };
-      this.websocket.onerror = () => {
+      socket.onerror = () => {
         clearTimeout(connectionTimeout);
         reject(new Error('GameHub KG websocket 连接失败'));
       };
-      this.websocket.onclose = () => {
+      socket.onclose = () => {
+        clearTimeout(connectionTimeout);
+        if (this.websocket !== socket) return;
+        this.stopSourceHeartbeat();
+        this.websocket = null;
         this.eventBus.publishSourceEvent('local_SocketState', 'socket---已关闭');
         if (this.shouldReconnect) this.scheduleAuthenticatedReconnect();
       };
-      this.websocket.onopen = () => {
+      socket.onopen = () => {
+        if (this.websocket !== socket) {
+          socket.close();
+          reject(new Error('GameHub KG websocket 连接已被更新连接取代'));
+          return;
+        }
         clearTimeout(connectionTimeout);
         this.reconnectAttemptCount = 0;
+        this.startSourceHeartbeat(socket);
         const hallConnected = this.waitForSourceEvent('Msg_Hall_Connect', 10_000);
-        this.sendSourceEvent('Msg_Hall_Connect', { gtype: DZPK_CLIENT_GAME_ID });
+        this.sendSourceEventThroughSocket(socket, 'Msg_Hall_Connect', {
+          gtype: DZPK_CLIENT_GAME_ID,
+        });
         hallConnected.then((sourceEnvelope) => {
           if (restoreRoomAfterConnect && this.reconnectRoomId !== null) {
-            this.sendSourceEvent('Msg_Hall_FinishLoad', { rid: this.reconnectRoomId });
+            this.sendSourceEventThroughSocket(socket, 'Msg_Hall_FinishLoad', {
+              rid: this.reconnectRoomId,
+            });
           }
           resolve(sourceEnvelope);
-        }).catch(reject);
+        }).catch((connectionError) => {
+          socket.close();
+          reject(connectionError);
+        });
       };
     });
+    this.connectionPromise = connectionPromise;
+    const clearConnectionPromise = (): void => {
+      if (this.connectionPromise === connectionPromise) this.connectionPromise = null;
+    };
+    connectionPromise.then(clearConnectionPromise, clearConnectionPromise);
+    return connectionPromise;
   }
 
   public sendSourceEvent(eventName: string, eventPayload: unknown = []): void {
-    if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
+    if (!this.websocket) {
+      throw new Error('GameHub KG websocket 尚未连接');
+    }
+    this.sendSourceEventThroughSocket(this.websocket, eventName, eventPayload);
+  }
+
+  private sendSourceEventThroughSocket(
+    socket: WebSocket,
+    eventName: string,
+    eventPayload: unknown,
+  ): void {
+    if (socket.readyState !== WebSocket.OPEN) {
       throw new Error('GameHub KG websocket 尚未连接');
     }
     this.requestSequence += 1;
     const requestId = `${this.sessionId}:${this.requestSequence}`;
-    this.websocket.send(this.protocolAdapter.createSourceRequestFrame(
+    socket.send(this.protocolAdapter.createSourceRequestFrame(
       eventName,
       eventPayload,
       requestId,
@@ -189,6 +237,7 @@ export class GameHubAuthenticatedTransport {
   }
 
   public restoreAuthenticatedConnection(): Promise<SourceEnvelope | void> {
+    if (this.connectionPromise) return this.connectionPromise;
     if (this.websocket?.readyState === WebSocket.OPEN) return Promise.resolve();
     return this.connectAuthenticatedWebSocket(true);
   }
@@ -197,9 +246,12 @@ export class GameHubAuthenticatedTransport {
     this.shouldReconnect = false;
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
     this.reconnectTimer = null;
+    this.stopSourceHeartbeat();
     this.reconnectAttemptCount = 0;
-    this.websocket?.close();
+    this.connectionPromise = null;
+    const socket = this.websocket;
     this.websocket = null;
+    socket?.close();
   }
 
   public endAuthenticatedSession(): void {
@@ -218,6 +270,25 @@ export class GameHubAuthenticatedTransport {
         if (this.shouldReconnect) this.scheduleAuthenticatedReconnect();
       });
     }, reconnectDelayMs);
+  }
+
+  private startSourceHeartbeat(socket: WebSocket): void {
+    this.stopSourceHeartbeat();
+    this.sourceHeartbeatTimer = setInterval(() => {
+      if (this.websocket !== socket || socket.readyState !== WebSocket.OPEN) return;
+      try {
+        // Preserves the original KG liveness event. GameHub uses the same
+        // dispatch to refresh the authoritative session heartbeat.
+        this.sendSourceEventThroughSocket(socket, 'Msg_Hall_Heart', []);
+      } catch {
+        // onclose owns reconnect and user-facing diagnostics.
+      }
+    }, ORIGINAL_SOURCE_HEARTBEAT_INTERVAL_MS);
+  }
+
+  private stopSourceHeartbeat(): void {
+    if (this.sourceHeartbeatTimer) clearInterval(this.sourceHeartbeatTimer);
+    this.sourceHeartbeatTimer = null;
   }
 
   private subscribeReconnectLocationUpdates(): void {

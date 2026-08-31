@@ -17,7 +17,10 @@ export function collectAwardDestinationSeats(settlement: DzpkSettlementPresentat
     const localSeatId = settlement.localSeatByUid[returningUid];
     if (localSeatId !== undefined) destinationSeats.add(localSeatId);
   });
-  return [...destinationSeats];
+  // Creator 3.8's current script transform lowers `[...new Set()]` to
+  // `[].concat(set)`, which passes the Set itself as a seat id. Array.from
+  // preserves the intended numeric destination list in the web build.
+  return Array.from(destinationSeats);
 }
 
 export function sourceHiddenSeatPosition(localSeatId: number): Vec3 {

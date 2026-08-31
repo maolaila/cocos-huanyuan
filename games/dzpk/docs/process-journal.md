@@ -490,12 +490,74 @@
   商户泄漏保护和不可豁免门。
 - ResolutionStatus：reports `220/220`、合成篡改矩阵和 REAL MySQL reconciliation 通过。
 
+### `DZPK-PIT-038` — 3.8 直连漏迁原版 Hall 心跳
+
+- Symptom：REAL 首次能加载 Room，数分钟后 WS 重连均为 101 后立即关闭；服务端连续记录
+  `session expired`，房间点击看似无效。
+- RootCause：原版 `kg_agent_moblie_restore/assets/_script/NetNode.js` 在连接成功后每 5 秒发送
+  `Msg_Hall_Heart`；3.8 `GameHubAuthenticatedTransport` 只迁了业务事件。GameHub session sweeper 因无
+  权威 heartbeat 把会话回收，后续 WS 鉴权自然失败。
+- Decision：直连 transport 恢复原版 5 秒 `Msg_Hall_Heart`；GameHub KG WS 在同一 dispatch 上刷新
+  session heartbeat 和 Hall lifecycle，不新增私有心跳协议。连接超时/Hall Connect 失败同时关闭旧
+  socket，避免留下表面 OPEN 的死连接。
+- PreventionRule：每款 KG WS 游戏的 source inventory 必须包含连接、心跳、收包超时、重连和关闭
+  timer；“首屏能开”不能替代持续会话验证。
+- ResolutionStatus：同一 REAL session 记录 174 次 heartbeat、7 次发牌、7 次结算、0 WS close、
+  0 frame error；刷新后的 Connect/Heart/FinishLoad/RoomInfo 均成功。
+
+### `DZPK-PIT-039` — Creator CLI 被父进程管道关闭触发 EPIPE
+
+- Symptom：`CocosCreator.exe --project ... --build ...` 只拉起 Electron 子进程，调用端很快退出；
+  `project.log` 连续出现 `EPIPE: broken pipe`，目标 build log 不存在。
+- RootCause：Creator Electron 子进程继续写继承的 stdout/stderr，但短命令执行器已经关闭管道。
+- Decision：用 `Start-Process -Wait -WindowStyle Hidden`，把 stdout/stderr 直接重定向到文件；单独读取
+  build log，Creator 3.8.8 的官方成功退出码按 `36` 判定，不能用 shell 的 `0` 代替。
+- PreventionRule：所有 Creator unattended build 必须保留子进程输出句柄并同时核对 exit code、
+  `Finished` 日志、产物时间和 served chunk 身份。
+- ResolutionStatus：最终 web-mobile 构建 `703` 文件，exit `36`，build-7 日志 `Finished`。
+
+### `DZPK-PIT-040` — 连续新建 REAL 测试会话污染钱包 reservation
+
+- Symptom：Hall EnterRoom 成功、DZPKMain 已实例化，但 FinishLoad 返回
+  `wallet is reserved by another active REAL game session`。
+- RootCause：为追赶短 launchCode 对同一个测试玩家反复创建 REAL session；旧测试会话虽被关闭，
+  其尚未收敛的 play lock/transfer reservation 仍属于前一条事实链。
+- Decision：一个可玩回归只创建一次玩家/session，后续刷新严格复用 sessionToken；需要隔离重新开始时
+  使用新测试玩家，并把旧 reservation 作为独立 session-lifecycle 证据处理，不能伪装成 DZPK 入桌失败。
+- PreventionRule：自动化必须区分“重连同一 session”和“创建新 launch”；不得为了方便在同一玩家上
+  连续创建并行 REAL 会话。
+- ResolutionStatus：新隔离玩家首个 FinishLoad 即返回 RoomInfo/FaCards；旧污染未用于通过证据。
+
+### `DZPK-PIT-041` — 重连后返回同时恢复 Room 与 Load
+
+- Symptom：刷新重连牌桌后点击原版返回，Msg_DZPK_Out 成功但画面先是灰 Canvas，修复保留节点后又被
+  Texas Poker Load splash 永久覆盖。
+- RootCause：重连 RoomInfo 曾销毁 Room container 的全部子节点；随后 return 又把 container 下的
+  `Room` 与 `Load` 一起激活。
+- Decision：重连只隐藏、不销毁原版 Room prefab；Out 返回时精确激活名为 `Room` 的源 Prefab，
+  同时关闭 `Load`，销毁 Game table tree。
+- PreventionRule：场景返回必须核对 container 及每个子 Prefab 的 active/children 状态，不能只看
+  网络 Out 成功或根节点 active。
+- ResolutionStatus：最终重连后 Out 请求/响应成功，余额 `200000.000000`，画面回原版 Room，
+  该段新增 0 error/warn。
+
+### `DZPK-PIT-042` — Creator transform 把 Set spread 降级成单元素数组
+
+- Symptom：结算动画报 `DZPK local seat is outside the original six-seat table: [object Set]`。
+- RootCause：源码 `[...destinationSeats]` 在当前 Creator 3.8 web transform 中生成
+  `[].concat(destinationSeats)`，把 Set 本身传给座位动画。
+- Decision：跨 Creator 构建边界的 iterable 显式使用 `Array.from(destinationSeats)`；同时忽略玩家
+  离席后已入队、但 actor 已不在权威快照中的迟到 ActBet。
+- PreventionRule：不能只审 TypeScript；必须抽查最终 bundle 的 iterable/spread/downlevel 结果并跑
+  至少一次真实结算。
+- ResolutionStatus：最终 bundle 为 `Array.from(destinationSeats)`；后续构建与返回段无该错误。
+
 ## 4. 当前恢复点
 
 ```text
-LastStableGate: Creator388GameHubRealMoneyLocalVerified
-CurrentGate: LocalMoneyCodeGatePassedAwaitingExternalDeliveryAndOnlineGates
-NextAction: validate real callback endpoint, publish immutable package, deploy exact commits, run dual-admin reconciliation and AI-QA v5 online
+LastStableGate: Creator388GameHubOnlineBackendRealPlayableVerified
+CurrentGate: LocalCreator388OnlineBackendVerifiedAwaitingStaticPublicationAndOnlineGates
+NextAction: publish immutable package, deploy exact Cocos/GameHub commits, run public-entry dual-admin reconciliation and AI-QA v5 online
 DoNotDo: polyfill transpiler helpers; fake CommonJS exports; add empty module aliases; delete Missing Script; redraw UI; regenerate UUIDs
 ```
 

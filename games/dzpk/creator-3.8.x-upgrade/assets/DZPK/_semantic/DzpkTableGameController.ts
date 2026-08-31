@@ -544,7 +544,10 @@ export class DzpkTableGameController extends Component {
         throw new Error('Msg_DZPK_ActBet requires actor uid');
       }
       const participant = this.tableStateModel.findParticipantByIdIfPresent(actionPayload.uid);
-      if (!participant) throw new Error('ActBet actor is absent from the table snapshot');
+      // A participant may leave just before an already queued table tick is
+      // delivered. The room snapshot is authoritative, so ignore that stale
+      // action instead of failing the remaining presentation queue.
+      if (!participant) return;
       const actionCode = Number(actionPayload.act);
       const contributionDelta = positiveChipAmountOrZero(actionPayload.gold);
       if (sourceIdentityEquals(participant.participantId, this.viewerParticipantId())) {

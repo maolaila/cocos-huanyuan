@@ -68,10 +68,11 @@ export class DzpkViewNavigator {
     this.gameRootNode.destroyAllChildren();
     this.gameRootNode.active = false;
     this.roomRootNode.active = true;
-    // RoomInfo hides the original Room prefab while the table is visible.
-    // Reactivating only the container leaves an empty gray canvas.
+    // Reconnect keeps both original Room and Load prefabs under this container.
+    // Only Room belongs on the return path; reactivating Load covers it with
+    // the Texas Poker splash forever.
     this.roomRootNode.children.forEach((roomChildNode) => {
-      roomChildNode.active = true;
+      roomChildNode.active = roomChildNode.name === 'Room';
     });
     this.eventBus.publishSourceEvent('local_Event', 'up_Gold');
   }
