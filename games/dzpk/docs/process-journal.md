@@ -4,8 +4,8 @@
 - KG gameId / gtype：`119 / 19`
 - 执行模式：`HUMAN_CHECKPOINTS`
 - 活标准：`kg-cocos-restoration-to-gamehub-v1`
-- 当前阶段：Creator 3.8.8 本地 REAL 聚合牌局资金、回调契约、重连与返回钱包显示验证完成，等待线上交付门
-- 当前结论：2.4 基线已冻结；3.8 本地完整牌局与 GameHub REAL 资金 authority 已验证；外部回调送达、线上包、双后台浏览器对账、商户加固和生产候选仍未完成
+- 当前阶段：Creator 3.8.8 本地包直连 GameHub 线上测试后端的 REAL/TRIAL、控钱、双后台对账和双进双出已验证，等待静态包公开交付门
+- 当前结论：2.4 基线已冻结；3.8 本地完整牌局、GameHub REAL 资金 authority、商户/平台正负控、总开关和浏览器对账已验证；S3 不可变包、官网公开入口、AI-QA v5、真实设备与生产加固仍未完成
 
 本日志记录真实决策、失败和恢复点。较新的失败会撤销受影响的旧检查点，但不会抹去仍然正确的
 规则、机器人、快照或后端基础成果。
@@ -89,6 +89,20 @@
 - DZPK 已注册统一 return-control capability；正控只累计实际盈利、负控只累计实际亏损，反向
   结果进度为 0。负控严格保持 KG 语义：排除最强候选但不固定发绝对最弱牌；
 - 平台 master gate 可一键关闭商户 KG 控钱：关闭时商户菜单/API 不可见不可用，但平台策略仍可用；
+- 2026-09-02 使用官网商户 `bygamehubtest001` 和本地 Creator 7456 直连线上测试后端完成四个隔离
+  玩家样本：商户正控实际盈利 `519.000000`、商户负控实际亏损 `500.000000`、平台负控实际亏损
+  `500.000000`、平台正控实际盈利 `108.000000`，策略均命中并自动完成，反向层级策略保持
+  `DISABLED/0`；
+- 同一批样本在商户后台汇总为 14 个 `SETTLED` 回合、28 个订单和 28 条账变；逐回合
+  `payout - bet = net` 与逐账变 `before +/- amount = after` 均为 0 差异。总控 master gate 已实机
+  完成 OFF/ON，OFF 时商户菜单消失且 API 503，平台策略仍能完成；结束后恢复 ON/version 3，
+  DZPK 活跃测试策略清零；
+- 为可控样本临时发布的 1/1000 下注配置 v2 已经审批回滚至权威 v1
+  `gbcv_01m1g0844qmd83zjdz4dzqr6xn`，assignment version 3、base bet `1000.000000`；
+- GameHub 修复提交已在共享线上测试环境以 Jenkins 精确部署；Merchant Admin TRIAL/TAB 可由可信
+  Origin 创建，TRIAL 在原版 v1 房间门槛下投影 source study chips。同一 session 已连续完成
+  `Room -> Table -> Out -> Room -> Table -> Out -> Room`，Console 为 0 error，仅保留原 Spine 3.6
+  与 3.8 runtime 的已知兼容 warning；
 - 通用 target-RTP 对 P2P 德州明确为 `NotApplicable`；原 KG room-profit 库存控制以独立
   `sourceInventoryControl=ACTIVE` 展示，避免把固定源码能力伪装成可发布 RTP；
 - 当前不能写成“原版后端已经完全恢复”或 `ProductionReadyCandidate`：仍缺在线测试部署、不可变
@@ -552,12 +566,60 @@
   至少一次真实结算。
 - ResolutionStatus：最终 bundle 为 `Array.from(destinationSeats)`；后续构建与返回段无该错误。
 
+### `DZPK-PIT-043` — Launch Sandbox 的 clientMeta 不能代替 IFRAME parentOrigin
+
+- Symptom：Merchant Admin TRIAL/TAB 报 `launch origin is required`；补 clientMeta 后，IFRAME 仍报
+  `parentOrigin is required for native Cocos IFRAME launches`。
+- RootCause：TRIAL 路由没有传可信浏览器 metadata；IFRAME 协议又要求独立的 `parentOrigin` 字段，
+  通用 `clientMeta.origin` 不会自动提升成该字段。
+- Decision：TRIAL/REAL 共用服务端请求头构造的 clientMeta；IFRAME 同时把同一 request Origin 显式
+  传给 parentOrigin，TAB/POPUP 不生成该字段。生成 launch 的 Origin/User-Agent 必须与消费浏览器一致。
+- PreventionRule：每个本地/线上 Cocos launch 测试矩阵必须分开覆盖 TRIAL/REAL 与 TAB/IFRAME；
+  HTTP 200 不能替代实际 context/init 的绑定校验。
+- ResolutionStatus：TRIAL/TAB 在线接口与本地 Cocos 已通过；IFRAME 修复已配 focused test，待最终精确
+  提交部署后再次探针确认。
+
+### `DZPK-PIT-044` — source Out retire 后必须同步清 Hall room lifecycle
+
+- Symptom：第一次 Out 可退 authority，但同一 WebSocket 再进房可能继续携带旧 loaded room；早期表象是
+  回 Room 后再次点击出现配置/dispatch 错误。
+- RootCause：DZPK 的 `Msg_DZPK_Out` 由 source adapter 消费，未走共享 `Msg_Hall_OutGame`，所以游戏
+  authority 与 Hall lifecycle 是两个需要按顺序收敛的事实。
+- Decision：adapter 先合法完成进行中牌局并 retire authority，再由 dispatcher 清共享 Hall room，
+  最后返回原 `Msg_DZPK_Out`；任何一步失败都不伪造返回成功。
+- PreventionRule：牌桌游戏退出验收固定为同一 socket 的双进双出，不再只测一次返回。
+- ResolutionStatus：TRIAL 同 session 双进双出全部为 true，最终 Room 保留、Table 已销毁、0 error。
+
+### `DZPK-PIT-045` — TRIAL 通用 1000 余额低于原版房间门槛
+
+- Symptom：权威 v1 恢复后，TRIAL Room 可显示但三个房间最低需要 20万/25万/100万，GameHub 通用
+  demoBalance `1000.000000` 导致全部不可进入。
+- RootCause：DZPK TRIAL authority 使用 source study chips；通用 demo wallet 只适合小额通用试玩，
+  不能代表原版整数牌桌筹码。
+- RejectedApproach：再次缩小 REAL 下注配置，或把试玩显示筹码写回 GameHub 钱包。
+- Decision：仅在 TRIAL Room affordability 层按已发布 source room 的最高 minimum 投影 study chips；
+  首个 RoomInfo 立即用权威桌上 stack 覆盖。REAL 仍完整保留六位小数钱包事实。
+- PreventionRule：迁移每款 source game 时核对通用试玩余额与最小可玩单位；不匹配时建立显式非真钱桥接，
+  不改生产默认值。
+- ResolutionStatus：TRIAL 初始 Room 显示 `1,000,000`，两次入桌/退出后显示权威 `480,000`。
+
+### `DZPK-PIT-046` — 重新构建后浏览器仍命中旧无 hash bundle
+
+- Symptom：源码和新 build 均含 `applyRoomConfiguration`，但既有 Playwright 页面仍加载旧
+  `assets/main/index.js`，表现为 mode 未定义；给整页加 `Cache-Control` 又让跨域 context/init 预检失败。
+- RootCause：无 MD5 的同 URL 静态脚本被浏览器内存缓存；页面级额外请求头同时污染了 GameAPI CORS。
+- Decision：用全新浏览器 context 验证新 build，launch 绑定使用该 context 的真实 User-Agent；不把
+  静态 cache-bust header 扩散到跨域 API。
+- PreventionRule：新构建验证先核对 served chunk 内容/尺寸，再使用空白新 context 消费一次性 launch；
+  缓存控制只作用于静态资源层。
+- ResolutionStatus：全新 `dzpk-final2` context 实机通过，Console 仅一条 Spine warning。
+
 ## 4. 当前恢复点
 
 ```text
-LastStableGate: Creator388GameHubOnlineBackendRealPlayableVerified
-CurrentGate: LocalCreator388OnlineBackendVerifiedAwaitingStaticPublicationAndOnlineGates
-NextAction: publish immutable package, deploy exact Cocos/GameHub commits, run public-entry dual-admin reconciliation and AI-QA v5 online
+LastStableGate: LocalCreator388OnlineBackendAdminDataReconciled
+CurrentGate: LocalCreator388OnlineBackendVerifiedAwaitingStaticPublicationAndPublicEntryGates
+NextAction: publish immutable Cocos package, bind the exact build to the online catalog, then rerun public-entry desktop/mobile AI-QA v5 and final admin reconciliation
 DoNotDo: polyfill transpiler helpers; fake CommonJS exports; add empty module aliases; delete Missing Script; redraw UI; regenerate UUIDs
 ```
 

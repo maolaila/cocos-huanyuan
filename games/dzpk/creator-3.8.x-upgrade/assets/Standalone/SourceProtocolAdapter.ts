@@ -70,7 +70,9 @@ export class SourceProtocolAdapter {
       this.gameContext.applyRoomIdentifier(eventPayload.rid as string | number);
     }
     if (sourceEnvelope.event === 'Msg_Hall_GameSessions' && sourceEnvelope.status === 1) {
-      this.gameContext.roomConfig = (sourceEnvelope.data ?? {}) as Record<string, unknown>;
+      this.gameContext.applyRoomConfiguration(
+        (sourceEnvelope.data ?? {}) as Record<string, unknown>,
+      );
     }
     if (sourceEnvelope.event === 'Msg_DZPK_RoomInfo' && sourceEnvelope.status === 1 && eventPayload) {
       this.gameContext.roomLevel = Number(eventPayload.level) || this.gameContext.roomLevel;

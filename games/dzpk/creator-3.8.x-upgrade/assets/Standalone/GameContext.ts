@@ -44,6 +44,7 @@ export interface DzpkGameDefinition {
 /** Viewer-safe runtime context shared by the migrated 3.8 components. */
 export class GameContext {
   public readonly gameID = DZPK_CLIENT_GAME_ID;
+  public mode: AuthenticatedGameContext['mode'] = 'TRIAL';
   public roomID: string | number | null = null;
   public roomLevel = 2;
   public roomConfig: Record<string, unknown> = {};
@@ -74,6 +75,7 @@ export class GameContext {
   };
 
   public applyAuthenticatedContext(authenticatedContext: AuthenticatedGameContext): void {
+    this.mode = authenticatedContext.mode;
     const sourceIdentity = authenticatedContext.platformPlayerId
       ?? authenticatedContext.merchantPlayerId
       ?? authenticatedContext.sessionId;
@@ -93,6 +95,30 @@ export class GameContext {
       ?? '学习玩家',
     ).slice(0, 20);
     this.postMessageTargetOrigin = authenticatedContext.sdkConfig.postMessageTargetOrigin ?? '';
+  }
+
+  public applyRoomConfiguration(roomConfiguration: Record<string, unknown>): void {
+    this.roomConfig = roomConfiguration;
+    if (this.mode !== 'TRIAL') return;
+
+    // DZPK TRIAL uses the source study-chip authority, not GameHub's generic
+    // 1,000-unit trial wallet. Seed the Room-only affordability check from the
+    // published source rooms so every original room remains selectable; the
+    // first RoomInfo snapshot then replaces this with the authoritative stack.
+    const highestMinimumEntry = Object.values(roomConfiguration).reduce(
+      (highestMinimum, candidate) => {
+        if (!candidate || typeof candidate !== 'object') return highestMinimum;
+        const minimumEntry = Number((candidate as { min_gold?: unknown }).min_gold);
+        return Number.isFinite(minimumEntry)
+          ? Math.max(highestMinimum, minimumEntry)
+          : highestMinimum;
+      },
+      0,
+    );
+    const currentGold = Number(this.viewerProfile.gold);
+    if (highestMinimumEntry > 0 && (!Number.isFinite(currentGold) || currentGold < highestMinimumEntry)) {
+      this.viewerProfile.gold = highestMinimumEntry;
+    }
   }
 
   public applyRoomIdentifier(roomId: string | number | null): void {
