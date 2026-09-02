@@ -15,11 +15,11 @@ import { EventSubscription } from '../../Standalone/DzpkEventBus';
 import { requireDzpkRuntimeServices } from '../../Standalone/DzpkRuntimeServices';
 import { SourceEnvelope } from '../../Standalone/SourceProtocolAdapter';
 import {
+  applyDzpkAmountLabel,
   applyNodeOpacity,
-  formatSourceInteger,
-  formatSourceWalletBalance,
+  constrainSingleLineLabel,
+  fitSourceDisplayName,
   setOriginalAvatar,
-  truncateSourceDisplayName,
 } from '../../Standalone/DzpkUiHelpers';
 
 const { ccclass, property } = _decorator;
@@ -36,6 +36,7 @@ interface RoomConfiguration {
   min_gold: number;
   max_gold?: number;
   doublescore?: number;
+  vals?: { ante?: number };
 }
 
 /** Creator 3.8 equivalent of the original three-room selection component. */
@@ -93,21 +94,13 @@ export class DzpkRoomSelectionController extends Component {
   private refreshRoomSelectionWhenEnabled(): void {
     const { gameContext } = requireDzpkRuntimeServices();
     if (gameContext.isReconnect) return;
-    if (this.viewerGoldLabel) {
-      this.viewerGoldLabel.string = formatSourceWalletBalance(gameContext.getKey('gold'));
-    }
+    this.renderViewerWalletLabels();
     this.playOriginalRoomEntranceAnimation();
   }
 
   private handleLocalSourceEvent(sourceEventName: string): void {
     if (sourceEventName !== VIEWER_BALANCE_CHANGED_EVENT) return;
-    const { gameContext } = requireDzpkRuntimeServices();
-    if (this.viewerGoldLabel) {
-      this.viewerGoldLabel.string = formatSourceWalletBalance(gameContext.getKey('gold'));
-    }
-    if (this.viewerBankGoldLabel) {
-      this.viewerBankGoldLabel.string = formatSourceInteger(gameContext.getKey('bank'));
-    }
+    this.renderViewerWalletLabels();
   }
 
   private initializeOriginalRoomCardsAndViewerPanel(): void {
@@ -117,18 +110,115 @@ export class DzpkRoomSelectionController extends Component {
       const roomChoiceNode = roomChoiceContainer.getChildByName(String(Number(roomLevelKey) - 1));
       roomChoiceNode?.on(Button.EventType.CLICK, this.handleRoomChoiceButtonPressed, this);
     });
+    this.renderRoomConfigurationLabels();
     if (this.viewerAvatarSprite) {
       void setOriginalAvatar(this.viewerAvatarSprite, gameContext.getKey('headimgurl'));
     }
     if (this.viewerNicknameLabel) {
-      this.viewerNicknameLabel.string = truncateSourceDisplayName(
+      constrainSingleLineLabel(this.viewerNicknameLabel);
+      this.viewerNicknameLabel.string = fitSourceDisplayName(
         gameContext.getKey('nickname'),
-        10,
+        14,
+      );
+    }
+    this.renderViewerWalletLabels();
+  }
+
+  private renderViewerWalletLabels(): void {
+    const { gameContext } = requireDzpkRuntimeServices();
+    if (this.viewerGoldLabel) {
+      applyDzpkAmountLabel(
+        this.viewerGoldLabel,
+        gameContext.getKey('gold'),
+        gameContext.currency,
+        {
+          maxCharacters: 9,
+          groupedWallet: true,
+          includeCurrencySymbol: true,
+          bitmapFontProfile: 'DIGITS_AND_COMMA',
+          shrinkToFit: false,
+          systemFontScale: 0.9,
+        },
       );
     }
     if (this.viewerBankGoldLabel) {
-      this.viewerBankGoldLabel.string = formatSourceInteger(gameContext.getKey('bank'));
+      applyDzpkAmountLabel(
+        this.viewerBankGoldLabel,
+        gameContext.getKey('bank'),
+        gameContext.currency,
+        {
+          maxCharacters: 9,
+          groupedWallet: true,
+          includeCurrencySymbol: true,
+          bitmapFontProfile: 'DIGITS_AND_COMMA',
+          shrinkToFit: false,
+          systemFontScale: 0.9,
+        },
+      );
     }
+  }
+
+  private renderRoomConfigurationLabels(): void {
+    const { gameContext } = requireDzpkRuntimeServices();
+    const roomChoiceContainer = requireProperty(this.roomChoiceContainer, 'roomChoiceContainer');
+    Object.values(gameContext.roomConfig).forEach((configurationValue) => {
+      const configuration = configurationValue as RoomConfiguration;
+      const roomChoiceNode = roomChoiceContainer.getChildByName(String(configuration.level - 1));
+      if (!roomChoiceNode) return;
+      const smallBlindAmount = Number(configuration.doublescore) || 0;
+      this.renderRoomCardAmount(roomChoiceNode, 'room_xz', smallBlindAmount, 5);
+      this.renderRoomCardAmount(roomChoiceNode, 'room_xz copy', smallBlindAmount * 2, 5);
+
+      const minimumEntryLabel = roomChoiceNode.getChildByName('room_zr')?.getComponent(Label);
+      if (minimumEntryLabel) {
+        applyDzpkAmountLabel(minimumEntryLabel, configuration.min_gold, gameContext.currency, {
+          maxCharacters: 5,
+          sourceTenThousandDecimals: 0,
+          sourceHundredMillionDecimals: 0,
+          bitmapFontProfile: 'CNY_INTEGER_UNITS',
+          systemFontScale: 0.88,
+        });
+      }
+
+      const maximumCarryLabel = roomChoiceNode.getChildByName('3')?.getComponent(Label);
+      if (!maximumCarryLabel || !configuration.max_gold) return;
+      if (shouldKeepOriginalMaximumCarryLabel(
+        gameContext.currency,
+        configuration.level,
+        Number(configuration.max_gold),
+      )) {
+        return;
+      }
+      applyDzpkAmountLabel(maximumCarryLabel, configuration.max_gold, gameContext.currency, {
+        maxCharacters: 5,
+        sourceTenThousandDecimals: 0,
+        sourceHundredMillionDecimals: 0,
+        bitmapFontProfile: 'NONE',
+        systemFontScale: 0.76,
+      });
+    });
+  }
+
+  private renderRoomCardAmount(
+    roomChoiceNode: Node,
+    labelNodeName: string,
+    amount: number,
+    maxCharacters: number,
+  ): void {
+    const label = roomChoiceNode.getChildByName(labelNodeName)?.getComponent(Label);
+    if (!label || amount <= 0) return;
+    applyDzpkAmountLabel(
+      label,
+      amount,
+      requireDzpkRuntimeServices().gameContext.currency,
+      {
+        maxCharacters,
+        sourceTenThousandDecimals: 0,
+        sourceHundredMillionDecimals: 0,
+        bitmapFontProfile: 'CNY_INTEGER_UNITS',
+        systemFontScale: 0.88,
+      },
+    );
   }
 
   private hideRoomSelectionAfterTableSnapshot(): void {
@@ -295,4 +385,15 @@ function requireProperty<T>(value: T | null, propertyName: string): T {
 
 function requireUiOpacity(targetNode: Node): UIOpacity {
   return targetNode.getComponent(UIOpacity) ?? targetNode.addComponent(UIOpacity);
+}
+
+function shouldKeepOriginalMaximumCarryLabel(
+  currencyCode: string,
+  roomLevel: number,
+  maximumCarryAmount: number,
+): boolean {
+  const normalizedCurrency = currencyCode.toUpperCase();
+  if (!['CNY', 'CNH', 'RMB'].includes(normalizedCurrency)) return false;
+  return (roomLevel === 2 && maximumCarryAmount === 1_000_000)
+    || (roomLevel === 3 && maximumCarryAmount === 5_000_000);
 }

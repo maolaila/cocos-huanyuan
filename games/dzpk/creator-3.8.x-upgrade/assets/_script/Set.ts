@@ -1,5 +1,6 @@
 import { Event, Label, Node, Toggle, _decorator, find, sys } from 'cc';
 import { requireDzpkRuntimeServices } from '../Standalone/DzpkRuntimeServices';
+import { constrainSingleLineLabel } from '../Standalone/DzpkUiHelpers';
 import { PopupBase } from './PopupBase';
 
 const { ccclass } = _decorator;
@@ -12,7 +13,8 @@ export class Set extends PopupBase {
     this.initNight();
     const versionLabel = this.main?.getChildByName('vs')?.getComponent(Label);
     if (versionLabel) {
-      versionLabel.string = 'v1.0.web.8-0.1.3.8.8-upgrade';
+      constrainSingleLineLabel(versionLabel);
+      versionLabel.string = 'v3.8.8';
     }
   }
 

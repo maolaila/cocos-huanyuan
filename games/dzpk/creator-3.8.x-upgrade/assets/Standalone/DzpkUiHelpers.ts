@@ -14,6 +14,62 @@ import {
 export const ORIGINAL_WHITE_COLOR = new Color(255, 255, 255, 255);
 export const ORIGINAL_ASH_COLOR = new Color(140, 140, 140, 255);
 
+export type DzpkBitmapFontProfile =
+  | 'DIGITS_AND_COMMA'
+  | 'CNY_INTEGER_UNITS'
+  | 'CNY_DECIMAL_UNITS'
+  | 'NONE';
+
+export interface DzpkAmountFormatOptions {
+  maxCharacters?: number;
+  sourceTenThousandDecimals?: number;
+  sourceHundredMillionDecimals?: number;
+  groupedWallet?: boolean;
+  includeCurrencySymbol?: boolean;
+}
+
+export interface DzpkAmountLabelOptions extends DzpkAmountFormatOptions {
+  bitmapFontProfile?: DzpkBitmapFontProfile;
+  prefix?: string;
+  suffix?: string;
+  shrinkToFit?: boolean;
+  systemFontScale?: number;
+}
+
+interface OriginalLabelState {
+  font: Label['font'];
+  fontFamily: string;
+  fontSize: number;
+  lineHeight: number;
+  overflow: Label['overflow'];
+  enableWrapText: boolean;
+}
+
+interface CompactUnit {
+  scale: number;
+  suffix: string;
+}
+
+const originalLabelStateByLabel = new WeakMap<Label, OriginalLabelState>();
+const CNY_COMPACT_UNITS: readonly CompactUnit[] = [
+  { scale: 1_000_000_000_000, suffix: '万亿' },
+  { scale: 100_000_000, suffix: '亿' },
+  { scale: 10_000, suffix: '万' },
+];
+// Unicode CLDR/Intl vi-VN compact forms: nghìn, triệu, tỷ and nghìn tỷ.
+const VND_COMPACT_UNITS: readonly CompactUnit[] = [
+  { scale: 1_000_000_000_000, suffix: 'NT' },
+  { scale: 1_000_000_000, suffix: 'T' },
+  { scale: 1_000_000, suffix: 'Tr' },
+  { scale: 1_000, suffix: 'N' },
+];
+const INTERNATIONAL_COMPACT_UNITS: readonly CompactUnit[] = [
+  { scale: 1_000_000_000_000, suffix: 'T' },
+  { scale: 1_000_000_000, suffix: 'B' },
+  { scale: 1_000_000, suffix: 'M' },
+  { scale: 1_000, suffix: 'K' },
+];
+
 export function formatSourceInteger(value: unknown): string {
   const numericValue = Number(value);
   if (!Number.isFinite(numericValue)) return '0';
@@ -25,18 +81,42 @@ export function formatSourceWalletBalance(value: unknown): string {
   return formatSourceInteger(value);
 }
 
-export function truncateSourceDisplayName(value: unknown, maxDisplayUnits: number): string {
+/**
+ * Original handleNameLen semantics. CJK may consume the final two-unit slot;
+ * table labels pass appendEllipsis=false exactly like DZPKView.setPlayerInfo.
+ */
+export function truncateSourceDisplayName(
+  value: unknown,
+  maxDisplayUnits: number,
+  appendEllipsis = true,
+): string {
   const sourceText = String(value ?? '');
   if (displayUnitLength(sourceText) <= maxDisplayUnits) return sourceText;
   let truncatedText = '';
   let consumedUnits = 0;
   for (const character of sourceText) {
-    const characterUnits = displayUnitLength(character);
-    if (consumedUnits + characterUnits > maxDisplayUnits) break;
+    if (consumedUnits >= maxDisplayUnits) break;
     truncatedText += character;
+    consumedUnits += displayUnitLength(character);
+  }
+  return appendEllipsis ? `${truncatedText}...` : truncatedText;
+}
+
+/** Keeps the ellipsis inside a fixed-width lobby label instead of adding it after the budget. */
+export function fitSourceDisplayName(value: unknown, maxDisplayUnits: number): string {
+  const sourceText = String(value ?? '');
+  if (displayUnitLength(sourceText) <= maxDisplayUnits) return sourceText;
+  const ellipsis = '...';
+  const contentBudget = Math.max(0, maxDisplayUnits - displayUnitLength(ellipsis));
+  let fittedText = '';
+  let consumedUnits = 0;
+  for (const character of sourceText) {
+    const characterUnits = displayUnitLength(character);
+    if (consumedUnits + characterUnits > contentBudget) break;
+    fittedText += character;
     consumedUnits += characterUnits;
   }
-  return `${truncatedText}...`;
+  return `${fittedText}${ellipsis}`;
 }
 
 /** Exact 2.4 Utils.goldFormat semantics used by the original DZPK labels. */
@@ -52,6 +132,104 @@ export function formatOriginalGold(
     return `${roundFixed(amount / 10_000, tenThousandDecimals)}万`;
   }
   return `${roundFixed(amount / 100_000_000, hundredMillionDecimals)}亿`;
+}
+
+/** Currency-aware display only. The returned text must never become a wallet or bet input. */
+export function formatDzpkCurrencyAmount(
+  value: unknown,
+  currencyCode: unknown,
+  options: DzpkAmountFormatOptions = {},
+): string {
+  const amount = normalizeDisplayAmount(value);
+  const currency = normalizeCurrencyCode(currencyCode);
+  const maxCharacters = Math.max(3, Math.floor(options.maxCharacters ?? 8));
+  const sourceTenThousandDecimals = options.sourceTenThousandDecimals ?? 1;
+  const sourceHundredMillionDecimals = options.sourceHundredMillionDecimals ?? 3;
+
+  if (isChineseCurrency(currency)) {
+    if (options.groupedWallet) {
+      const groupedAmount = formatSourceInteger(amount);
+      if (textCharacterLength(groupedAmount) <= maxCharacters) return groupedAmount;
+      return formatScaledAmount(amount, CNY_COMPACT_UNITS, maxCharacters, '', '', '.');
+    }
+    const sourceAmount = formatOriginalGold(
+      amount,
+      sourceTenThousandDecimals,
+      sourceHundredMillionDecimals,
+    );
+    if (textCharacterLength(sourceAmount) <= maxCharacters) return sourceAmount;
+    return formatScaledAmount(amount, CNY_COMPACT_UNITS, maxCharacters, '', '', '.');
+  }
+
+  if (currency === 'VND') {
+    return formatScaledAmount(
+      amount,
+      VND_COMPACT_UNITS,
+      maxCharacters,
+      '',
+      options.includeCurrencySymbol ? '₫' : '',
+      ',',
+    );
+  }
+
+  return formatScaledAmount(
+    amount,
+    INTERNATIONAL_COMPACT_UNITS,
+    maxCharacters,
+    options.includeCurrencySymbol && currency === 'USD' ? '$' : '',
+    '',
+    '.',
+  );
+}
+
+export function applyDzpkAmountLabel(
+  label: Label,
+  value: unknown,
+  currencyCode: unknown,
+  options: DzpkAmountLabelOptions = {},
+): string {
+  const prefix = options.prefix ?? '';
+  const suffix = options.suffix ?? '';
+  const maxCharacters = Math.max(3, Math.floor(options.maxCharacters ?? 8));
+  const amountCharacterBudget = Math.max(
+    3,
+    maxCharacters - textCharacterLength(prefix) - textCharacterLength(suffix),
+  );
+  const amountText = formatDzpkCurrencyAmount(value, currencyCode, {
+    ...options,
+    maxCharacters: amountCharacterBudget,
+  });
+  const displayText = `${prefix}${amountText}${suffix}`;
+  const originalState = rememberOriginalLabelState(label);
+  const needsSystemFont = Boolean(originalState.font)
+    && !bitmapFontSupports(displayText, options.bitmapFontProfile ?? 'NONE');
+
+  if (needsSystemFont) {
+    label.font = null;
+    label.fontFamily = 'Arial';
+    const systemFontScale = Math.max(0.5, Math.min(1, options.systemFontScale ?? 0.9));
+    label.fontSize = Math.max(12, originalState.fontSize * systemFontScale);
+    label.lineHeight = Math.max(label.fontSize, originalState.lineHeight * systemFontScale);
+  } else {
+    label.font = originalState.font;
+    if (!originalState.font) label.fontFamily = originalState.fontFamily;
+    label.fontSize = originalState.fontSize;
+    label.lineHeight = originalState.lineHeight;
+  }
+
+  if (options.shrinkToFit !== false) constrainSingleLineLabel(label);
+  else {
+    label.overflow = originalState.overflow;
+    label.enableWrapText = false;
+  }
+  label.string = displayText;
+  return displayText;
+}
+
+export function constrainSingleLineLabel(label: Label): void {
+  rememberOriginalLabelState(label);
+  label.overflow = Label.Overflow.SHRINK;
+  label.enableWrapText = false;
 }
 
 export function hideOriginalChildNodes(parentNode: Node | null): void {
@@ -130,6 +308,90 @@ function displayUnitLength(sourceText: string): number {
     ) ? 1 : 2;
   }
   return displayUnits;
+}
+
+function rememberOriginalLabelState(label: Label): OriginalLabelState {
+  const rememberedState = originalLabelStateByLabel.get(label);
+  if (rememberedState) return rememberedState;
+  const originalState: OriginalLabelState = {
+    font: label.font,
+    fontFamily: label.fontFamily,
+    fontSize: label.fontSize,
+    lineHeight: label.lineHeight,
+    overflow: label.overflow,
+    enableWrapText: label.enableWrapText,
+  };
+  originalLabelStateByLabel.set(label, originalState);
+  return originalState;
+}
+
+function bitmapFontSupports(displayText: string, profile: DzpkBitmapFontProfile): boolean {
+  switch (profile) {
+    case 'DIGITS_AND_COMMA': return /^[0-9,]+$/.test(displayText);
+    case 'CNY_INTEGER_UNITS': return /^[0-9万亿千百]+$/.test(displayText);
+    case 'CNY_DECIMAL_UNITS': return /^[+0-9.万亿千百]+$/.test(displayText);
+    case 'NONE': return false;
+  }
+}
+
+function normalizeDisplayAmount(value: unknown): number {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue) || numericValue <= 0) return 0;
+  return Math.floor(numericValue);
+}
+
+function normalizeCurrencyCode(currencyCode: unknown): string {
+  const normalizedCode = String(currencyCode ?? '').trim().toUpperCase();
+  return normalizedCode || 'CNY';
+}
+
+function isChineseCurrency(currencyCode: string): boolean {
+  return currencyCode === 'CNY' || currencyCode === 'CNH' || currencyCode === 'RMB';
+}
+
+function formatScaledAmount(
+  amount: number,
+  units: readonly CompactUnit[],
+  maxCharacters: number,
+  prefix: string,
+  suffix: string,
+  decimalSeparator: '.' | ',',
+): string {
+  let selectedUnitIndex = units.findIndex((unit) => amount >= unit.scale);
+  if (selectedUnitIndex < 0) {
+    return `${prefix}${Math.floor(amount)}${suffix}`;
+  }
+  let selectedUnit = units[selectedUnitIndex];
+  let scaledAmount = amount / selectedUnit.scale;
+  if (scaledAmount >= 999.5 && selectedUnitIndex > 0) {
+    selectedUnitIndex -= 1;
+    selectedUnit = units[selectedUnitIndex];
+    scaledAmount = amount / selectedUnit.scale;
+  }
+  const preferredDecimals = scaledAmount < 10 ? 2 : scaledAmount < 100 ? 1 : 0;
+  for (let decimalPlaces = preferredDecimals; decimalPlaces >= 0; decimalPlaces -= 1) {
+    const numericText = localizeDecimalSeparator(
+      trimFixed(scaledAmount, decimalPlaces),
+      decimalSeparator,
+    );
+    const candidate = `${prefix}${numericText}${selectedUnit.suffix}${suffix}`;
+    if (textCharacterLength(candidate) <= maxCharacters) return candidate;
+  }
+  return `${prefix}${Math.round(scaledAmount)}${selectedUnit.suffix}${suffix}`;
+}
+
+function trimFixed(value: number, decimalPlaces: number): string {
+  return value.toFixed(Math.max(0, decimalPlaces))
+    .replace(/\.0+$/, '')
+    .replace(/(\.\d*?)0+$/, '$1');
+}
+
+function localizeDecimalSeparator(value: string, decimalSeparator: '.' | ','): string {
+  return decimalSeparator === ',' ? value.replace('.', ',') : value;
+}
+
+function textCharacterLength(value: string): number {
+  return Array.from(value).length;
 }
 
 function roundFixed(value: number, decimalPlaces: number): string {

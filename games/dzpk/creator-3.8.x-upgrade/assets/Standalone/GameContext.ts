@@ -9,8 +9,10 @@ export interface AuthenticatedGameContext {
   sessionToken?: string;
   walletMode?: 'SINGLE' | 'TRANSFER' | null;
   currency?: string;
+  language?: string;
   platformPlayerId?: string | number | null;
   merchantPlayerId?: string | null;
+  nickname?: string | null;
   wallet: {
     mainBalance: number | string;
     gameBalance?: number | string | null;
@@ -45,6 +47,8 @@ export interface DzpkGameDefinition {
 export class GameContext {
   public readonly gameID = DZPK_CLIENT_GAME_ID;
   public mode: AuthenticatedGameContext['mode'] = 'TRIAL';
+  public currency = 'CNY';
+  public language = 'zh-CN';
   public roomID: string | number | null = null;
   public roomLevel = 2;
   public roomConfig: Record<string, unknown> = {};
@@ -76,6 +80,8 @@ export class GameContext {
 
   public applyAuthenticatedContext(authenticatedContext: AuthenticatedGameContext): void {
     this.mode = authenticatedContext.mode;
+    this.currency = normalizeCurrencyCode(authenticatedContext.currency);
+    this.language = String(authenticatedContext.language ?? 'zh-CN');
     const sourceIdentity = authenticatedContext.platformPlayerId
       ?? authenticatedContext.merchantPlayerId
       ?? authenticatedContext.sessionId;
@@ -89,11 +95,12 @@ export class GameContext {
     // The KG table protocol is integer-chip based, but a GameHub wallet is decimal(20,6).
     // Keep the authenticated wallet fact exact until a source table snapshot supplies chips.
     this.viewerProfile.gold = normalizeGameHubWalletBalance(effectiveBalance);
-    this.viewerProfile.nickname = String(
-      authenticatedContext.merchantPlayerId
-      ?? authenticatedContext.platformPlayerId
-      ?? '学习玩家',
-    ).slice(0, 20);
+    this.viewerProfile.nickname = resolveViewerDisplayName(
+      authenticatedContext.nickname
+      ?? authenticatedContext.merchantPlayerId
+      ?? authenticatedContext.platformPlayerId,
+      this.language,
+    );
     this.postMessageTargetOrigin = authenticatedContext.sdkConfig.postMessageTargetOrigin ?? '';
   }
 
@@ -169,6 +176,25 @@ function normalizeSourceChipAmount(chipAmount: unknown): number {
 function normalizeGameHubWalletBalance(walletBalance: unknown): string {
   const normalizedText = String(walletBalance ?? '').trim();
   return /^(?:0|[1-9]\d*)(?:\.\d{1,6})?$/.test(normalizedText) ? normalizedText : '0';
+}
+
+function normalizeCurrencyCode(currencyCode: unknown): string {
+  const normalizedCode = String(currencyCode ?? '').trim().toUpperCase();
+  return normalizedCode || 'CNY';
+}
+
+function resolveViewerDisplayName(identityValue: unknown, language: string): string {
+  const identityText = String(identityValue ?? '').trim();
+  if (identityText && !isMachineGeneratedIdentity(identityText)) return identityText.slice(0, 40);
+  const normalizedLanguage = language.toLowerCase();
+  if (normalizedLanguage.startsWith('vi')) return 'Người chơi';
+  if (normalizedLanguage.startsWith('zh')) return '玩家';
+  return 'Player';
+}
+
+function isMachineGeneratedIdentity(identityText: string): boolean {
+  return /^(?:plr|pp|sid)_[A-Za-z0-9_-]{12,}$/.test(identityText)
+    || /^[0-9a-f]{24,}$/i.test(identityText);
 }
 
 function deriveStableSourceUid(identityText: string): number {

@@ -4,8 +4,8 @@
 - KG gameId / gtype：`119 / 19`
 - 执行模式：`HUMAN_CHECKPOINTS`
 - 活标准：`kg-cocos-restoration-to-gamehub-v1`
-- 当前阶段：Creator 3.8.8 本地包直连 GameHub 线上测试后端的 REAL/TRIAL、控钱、双后台对账和双进双出已验证，等待静态包公开交付门
-- 当前结论：2.4 基线已冻结；3.8 本地完整牌局、GameHub REAL 资金 authority、商户/平台正负控、总开关和浏览器对账已验证；S3 不可变包、官网公开入口、AI-QA v5、真实设备与生产加固仍未完成
+- 当前阶段：Creator 3.8.8 多币种动态文本/金额布局修正已完成代码审计，等待 HUMAN_CHECKPOINTS 人工视觉复核；此前 REAL/TRIAL、控钱、双后台对账和双进双出资金证据继续有效
+- 当前结论：2.4 基线已冻结；3.8 本地完整牌局和 GameHub 资金/控制链已验证；本次 CNY/USD/VND 显示层变化使旧 Cocos 视觉截图失效，S3 不可变包、官网公开入口、AI-QA v5、真实设备与生产加固仍未完成
 
 本日志记录真实决策、失败和恢复点。较新的失败会撤销受影响的旧检查点，但不会抹去仍然正确的
 规则、机器人、快照或后端基础成果。
@@ -72,6 +72,13 @@
   `BALANCE_CHANGED` callback authority，标准对账无 identity/money critical mismatch；
 - 该样本从进行中手牌返回 Room 后，画面金币 `1,906,800` 与 MySQL wallet
   `1906800.000000` 一致，authority=`LEFT`、play lock=`RELEASED`；
+- 3.8 显示层新增币种上下文但不改变资金输入：CNY 保留原数字/`万`/`亿` 习惯；VND 按
+  `N/Tr/T/NT` 与 `₫` 压缩；USD 按 `$` 与 `K/M/B/T` 压缩。Room 钱包、房间盲注/准入/最大携带、
+  Table 玩家筹码/下注/底池/加注/结算及余额不足提示全部共用同一显示格式器；
+- 内部 `plr_*/pp_*/sid_*` 不再作为玩家昵称铺到原版底栏，按 language 使用 `玩家`、`Người chơi`
+  或 `Player`；普通商户昵称仍保留，并在原 Label 宽度内收缩/省略；
+- 六个 3.8 Prefab 的静态 Label 宽度/字号扫描未发现新的静态文案越界；唯一估算异常是 Bank
+  EditBox 内由 EditBox 运行时管理的零宽 placeholder。实际风险均集中在上述动态昵称和金额节点；
 - 当前本地 gate：`Creator388GameHubRealMoneyLocalVerified`；这不是线上或生产候选证明。
 
 ### GameHub
@@ -615,12 +622,30 @@
   缓存控制只作用于静态资源层。
 - ResolutionStatus：全新 `dzpk-final2` context 实机通过，Console 仅一条 Spine warning。
 
+### `DZPK-PIT-047` — 原版短昵称/CNY 金额假设不能覆盖 GameHub 多币种
+
+- Symptom：Room 底栏把 `plr_db2465...` 当昵称显示，省略号被加在长度预算之外；长 VND 金额、
+  大额玩家筹码、下注/底池/结算和可配置房间金额可能撑开原 Label，覆盖相邻图片字或按钮。
+- RootCause：KG 原界面只面向短昵称、整数筹码和中文 `万/亿`；GameHub 接入后出现机器 ID、六位
+  钱包事实、USD/VND 以及商户可配置房间档位，但各节点仍分别调用原 `goldFormat` 或写死 Prefab 文案。
+- RejectedApproach：修改钱包/下注数值、降低 REAL 默认档位、全局替换原字体、把 VND 长数字硬塞入
+  BMFont，或只扩大 Canvas 节点掩盖覆盖问题。
+- Decision：权威数值不动；在 `DzpkUiHelpers` 建立唯一显示格式器。CNY 在长度允许时保持原格式，
+  VND 使用 CLDR 风格 `N/Tr/T/NT` 与 `₫`，USD 使用 `K/M/B/T` 与 `$`；原 BMFont 缺字时仅该动态
+  Label 回退 Arial，并在原 UITransform 中 SHRINK。房间 Prefab 仍不重绘，动态金额从 roomConfig
+  覆盖原占位文本。昵称区分真实昵称与机器 ID，桌面继续遵循原 `handleNameLen(..., 3, false)`。
+- GateInvalidated：币种/动态数字相关的旧 Cocos 视觉截图；资金、回合、订单、账变和控制对账不失效。
+- PreventionRule：后续 Cocos 游戏在人工视觉门前必须用 CNY/USD/VND 的短值、阈值、长值和最大安全
+  整数矩阵检查 Room、Table、操作按钮、结算、提示和移动横屏；缩写只能是显示层。
+- ResolutionStatus：代码和源 Prefab/Label 尺寸静态审计完成；按 HUMAN_CHECKPOINTS 约束不执行机器
+  编译/预览，等待人工以 Creator 3.8.8 复核。
+
 ## 4. 当前恢复点
 
 ```text
 LastStableGate: LocalCreator388OnlineBackendAdminDataReconciled
-CurrentGate: LocalCreator388OnlineBackendVerifiedAwaitingStaticPublicationAndPublicEntryGates
-NextAction: publish immutable Cocos package, bind the exact build to the online catalog, then rerun public-entry desktop/mobile AI-QA v5 and final admin reconciliation
+CurrentGate: Creator388CurrencyLayoutFixAwaitingHumanVisualVerification
+NextAction: manually verify CNY/USD/VND lobby, room cards, table amounts, controls and settlement in Creator 3.8.8; after acceptance rebuild the immutable package and resume public-entry gates
 DoNotDo: polyfill transpiler helpers; fake CommonJS exports; add empty module aliases; delete Missing Script; redraw UI; regenerate UUIDs
 ```
 

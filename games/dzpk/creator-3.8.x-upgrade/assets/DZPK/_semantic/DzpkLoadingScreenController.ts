@@ -89,7 +89,7 @@ export class DzpkLoadingScreenController extends Component {
       viewNavigator.requestStandaloneExit();
       return;
     }
-    gameContext.roomConfig = roomEnvelope.data as Record<string, unknown>;
+    gameContext.applyRoomConfiguration(roomEnvelope.data as Record<string, unknown>);
     void this.instantiateOriginalRoomSelection();
   }
 

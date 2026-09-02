@@ -7,14 +7,17 @@ import { requireDzpkRuntimeServices } from '../../Standalone/DzpkRuntimeServices
 import {
   ORIGINAL_ASH_COLOR,
   ORIGINAL_WHITE_COLOR,
+  applyDzpkAmountLabel,
   applyNodeOpacity,
+  constrainSingleLineLabel,
   convertNodeOriginToLocal,
-  formatOriginalGold,
+  formatDzpkCurrencyAmount,
   hideOriginalChildNodes,
   playOriginalSpine,
   setOriginalAvatar,
   setOriginalNodeColor,
   truncateSourceDisplayName,
+  type DzpkAmountLabelOptions,
 } from '../../Standalone/DzpkUiHelpers';
 import {
   DzpkParticipantState,
@@ -40,6 +43,11 @@ const { ccclass, property } = _decorator;
 const DEAL_CARD_OVERLAY_COUNT = 2;
 const WAGER_CHIP_ANIMATION_COUNT = 3;
 const POT_CHIP_ANIMATION_COUNT = 5;
+
+interface TableRoomConfiguration {
+  doublescore?: number | string;
+  vals?: { ante?: number | string };
+}
 
 /**
  * Creator 3.8 presentation for the original DZPKMain Prefab.
@@ -91,17 +99,29 @@ export class DzpkTablePresentation extends Component {
 
   /** The source selects this title before RoomInfo arrives, using roomLevel. */
   public renderOriginalRoomTitle(): void {
+    const { gameContext } = requireDzpkRuntimeServices();
     const roomLevelIndex = Math.max(
       0,
-      Number(requireDzpkRuntimeServices().gameContext.roomLevel || 1) - 1,
+      Number(gameContext.roomLevel || 1) - 1,
     );
     const roomNames = ['体验场', '新手场', '初级场', '中级场', '高级场'];
-    const blindDescriptions = ['1万/2万  前注:20万', '1千/2千  前注:2万', '5千/1万  前注:10万'];
+    const sourceFallbackDescriptions = ['1万/2万  前注:20万', '1千/2千  前注:2万', '5千/1万  前注:10万'];
     const roomName = roomNames[roomLevelIndex] ?? roomNames[0];
-    const blindDescription = blindDescriptions[roomLevelIndex]
-      ?? blindDescriptions[blindDescriptions.length - 1];
-    requireComponent(requireChild(this.node, 'gameType'), Label).string =
-      `${roomName}  小/大盲注:${blindDescription}`;
+    const roomConfiguration = gameContext.roomConfig[String(roomLevelIndex + 1)]
+      as TableRoomConfiguration | undefined;
+    const smallBlindAmount = Number(roomConfiguration?.doublescore) || 0;
+    const anteAmount = Number(roomConfiguration?.vals?.ante) || 0;
+    const blindDescription = smallBlindAmount > 0 && anteAmount > 0
+      ? `${this.formatTableAmount(smallBlindAmount, 5, 0)}/${this.formatTableAmount(
+        smallBlindAmount * 2,
+        5,
+        0,
+      )}  前注:${this.formatTableAmount(anteAmount, 6, 0)}`
+      : sourceFallbackDescriptions[roomLevelIndex]
+        ?? sourceFallbackDescriptions[sourceFallbackDescriptions.length - 1];
+    const roomTitleLabel = requireComponent(requireChild(this.node, 'gameType'), Label);
+    constrainSingleLineLabel(roomTitleLabel);
+    roomTitleLabel.string = `${roomName}  小/大盲注:${blindDescription}`;
   }
 
   public playAmbientTableAnimation(animationIndex: number): void {
@@ -139,14 +159,24 @@ export class DzpkTablePresentation extends Component {
     void setOriginalAvatar(headSprite, participantState.avatarKey).catch((avatarError) => {
       console.warn('[DZPK avatar]', avatarError);
     });
-    requireComponent(requireChild(informationNode, 'name'), Label).string =
-      truncateSourceDisplayName(participantState.displayName, 3);
+    const participantNameLabel = requireComponent(requireChild(informationNode, 'name'), Label);
+    constrainSingleLineLabel(participantNameLabel);
+    participantNameLabel.string = truncateSourceDisplayName(
+      participantState.displayName,
+      3,
+      false,
+    );
     this.renderParticipantChipBalance(localSeatId, participantState.stackChips);
   }
 
   public renderParticipantChipBalance(localSeatId: number, chipAmount: number): void {
     const goldNode = requireChild(requireChild(this.requireSeat(localSeatId), 'info'), 'gold');
-    requireComponent(goldNode, Label).string = formatOriginalGold(chipAmount, 2);
+    this.renderAmountLabel(
+      requireComponent(goldNode, Label),
+      chipAmount,
+      6,
+      2,
+    );
   }
 
   public resetParticipantSeatPresentation(localSeatId: number): void {
@@ -218,7 +248,12 @@ export class DzpkTablePresentation extends Component {
     }
     const renderWager = (): void => {
       wagerNode.active = true;
-      requireComponent(requireChild(wagerNode, 'label'), Label).string = formatOriginalGold(wagerChips, 2);
+      this.renderAmountLabel(
+        requireComponent(requireChild(wagerNode, 'label'), Label),
+        wagerChips,
+        5,
+        2,
+      );
     };
     if (!shouldAnimate) {
       renderWager();
@@ -332,8 +367,9 @@ export class DzpkTablePresentation extends Component {
   }
 
   public renderTotalPotAmount(totalPotChips: number): void {
-    requireBinding(this.totalPotLabel, 'totalPotLabel').string =
-      `底池:${formatOriginalGold(totalPotChips, 2)}`;
+    const totalPotLabel = requireBinding(this.totalPotLabel, 'totalPotLabel');
+    constrainSingleLineLabel(totalPotLabel);
+    totalPotLabel.string = `底池:${this.formatTableAmount(totalPotChips, 7, 2)}`;
   }
 
   public renderCollectedPotAmount(
@@ -346,15 +382,23 @@ export class DzpkTablePresentation extends Component {
     if (shouldRecoverChipNodes) {
       this.scheduleOnce(() => this.requireChipPool().releaseAllChildren(requireChild(this.node, 'chip')), 0.2);
     }
-    requireComponent(requireChild(collectedPotNode, 'label'), Label).string =
-      formatOriginalGold(collectedPotChips, 2);
+    this.renderAmountLabel(
+      requireComponent(requireChild(collectedPotNode, 'label'), Label),
+      collectedPotChips,
+      6,
+      2,
+    );
   }
 
   public renderWagerDifferenceAmount(differenceChips: number): void {
     if (!differenceChips) return;
     const differenceNode = requireNode('label/cazhi', this.node);
-    requireComponent(requireChild(differenceNode, 'label'), Label).string =
-      formatOriginalGold(differenceChips, 2);
+    this.renderAmountLabel(
+      requireComponent(requireChild(differenceNode, 'label'), Label),
+      differenceChips,
+      6,
+      2,
+    );
     // Preserved source behavior: prepared but hidden until its source animation uses it.
     differenceNode.active = false;
   }
@@ -403,8 +447,11 @@ export class DzpkTablePresentation extends Component {
       minimumContributionChips + 2 * tableStateModel.smallBlindChips <= viewerStackChips;
     requireChild(selectedControlNode, 'btn_rang').active = minimumContributionChips <= 0;
     requireChild(selectedControlNode, 'btn_green').active = minimumContributionChips > 0;
-    requireComponent(requireNode('btn_green/layout/label', selectedControlNode), Label).string =
-      formatOriginalGold(minimumContributionChips);
+    this.renderAmountLabel(
+      requireComponent(requireNode('btn_green/layout/label', selectedControlNode), Label),
+      minimumContributionChips,
+      5,
+    );
   }
 
   public synchronizeAutomaticActionToggles(selectedAutomaticActionIndex: number): void {
@@ -435,8 +482,12 @@ export class DzpkTablePresentation extends Component {
     for (let presetIndex = 0; presetIndex < 5; presetIndex += 1) {
       const presetButtonNode = requireChild(raiseSelectionRoot, String(presetIndex));
       const presetContribution = raisePresetContributions[presetIndex] ?? 0;
-      requireComponent(requireArrayItem(presetButtonNode.children, 0, 'raise label'), Label).string =
-        formatOriginalGold(presetContribution, 2);
+      this.renderAmountLabel(
+        requireComponent(requireArrayItem(presetButtonNode.children, 0, 'raise label'), Label),
+        presetContribution,
+        5,
+        2,
+      );
       requireComponent(presetButtonNode, Button).interactable = presetContribution <= viewerStackChips;
       this.contributionByButtonNode.set(presetButtonNode, presetContribution);
     }
@@ -464,8 +515,12 @@ export class DzpkTablePresentation extends Component {
     requireComponent(sliderNode, Slider).progress = sliderProgress;
     requireComponent(sliderNode, ProgressBar).progress = sliderProgress;
     const selectedContribution = Math.floor(this.viewerMaximumChipAmount * sliderProgress);
-    requireComponent(requireNode('slider/Handle/label', sliderPresentationRoot), Label).string =
-      formatOriginalGold(selectedContribution, 2);
+    this.renderAmountLabel(
+      requireComponent(requireNode('slider/Handle/label', sliderPresentationRoot), Label),
+      selectedContribution,
+      5,
+      2,
+    );
     this.contributionByButtonNode.set(requireChild(sliderPresentationRoot.parent!, 'btn'), selectedContribution);
 
     const allInSpineNode = requireNode('slider/spine', sliderPresentationRoot);
@@ -623,7 +678,17 @@ export class DzpkTablePresentation extends Component {
     const settlementRoot = requireChild(this.node, 'win');
     const originalWinnerLabel = requireChild(settlementRoot, 'winlabel');
     originalWinnerLabel.setSiblingIndex(settlementRoot.children.length - 1);
-    requireComponent(originalWinnerLabel, Label).string = `+${formatOriginalGold(winnerAwardChips)}`;
+    this.renderAmountLabel(
+      requireComponent(originalWinnerLabel, Label),
+      winnerAwardChips,
+      8,
+      1,
+      {
+        prefix: '+',
+        bitmapFontProfile: 'CNY_DECIMAL_UNITS',
+        systemFontScale: 0.86,
+      },
+    );
     originalWinnerLabel.active = true;
     originalWinnerLabel.setPosition(this.requireSeat(winnerLocalSeat).position);
     tween(originalWinnerLabel)
@@ -635,8 +700,11 @@ export class DzpkTablePresentation extends Component {
     if (winnerLocalSeat === 0) this.playOneShotSpine(requireChild(settlementRoot, 'spine'));
     const seatWinnerAnimation = settlementRoot.getChildByName(String(winnerLocalSeat));
     if (seatWinnerAnimation) {
-      requireComponent(requireChild(seatWinnerAnimation, 'gold'), Label).string =
-        formatOriginalGold(winnerAwardChips);
+      this.renderAmountLabel(
+        requireComponent(requireChild(seatWinnerAnimation, 'gold'), Label),
+        winnerAwardChips,
+        7,
+      );
       this.playOneShotSpine(requireChild(seatWinnerAnimation, 'spine'));
       return;
     }
@@ -658,7 +726,18 @@ export class DzpkTablePresentation extends Component {
     clonedLabel.setSiblingIndex(settlementRoot.children.length - 1);
     applyNodeOpacity(clonedLabel, 255);
     clonedLabel.active = true;
-    requireComponent(clonedLabel, Label).string = `+${formatOriginalGold(chipAmount)}${labelSuffix}`;
+    this.renderAmountLabel(
+      requireComponent(clonedLabel, Label),
+      chipAmount,
+      10,
+      1,
+      {
+        prefix: '+',
+        suffix: labelSuffix,
+        bitmapFontProfile: 'CNY_DECIMAL_UNITS',
+        systemFontScale: 0.86,
+      },
+    );
     clonedLabel.setPosition(this.requireSeat(localSeatId).position);
     tween(clonedLabel)
       .by(0.2, { position: new Vec3(0, 100, 0) }, { easing: 'quadOut' })
@@ -979,6 +1058,37 @@ export class DzpkTablePresentation extends Component {
 
   private delaySeconds(seconds: number): Promise<void> {
     return new Promise((resolve) => this.scheduleOnce(() => resolve(), Math.max(0, seconds)));
+  }
+
+  private currencyCode(): string {
+    return requireDzpkRuntimeServices().gameContext.currency;
+  }
+
+  private formatTableAmount(
+    amount: number,
+    maxCharacters: number,
+    sourceDecimals: number,
+  ): string {
+    return formatDzpkCurrencyAmount(amount, this.currencyCode(), {
+      maxCharacters,
+      sourceTenThousandDecimals: sourceDecimals,
+      sourceHundredMillionDecimals: sourceDecimals,
+    });
+  }
+
+  private renderAmountLabel(
+    label: Label,
+    amount: number,
+    maxCharacters: number,
+    sourceDecimals = 1,
+    options: DzpkAmountLabelOptions = {},
+  ): void {
+    applyDzpkAmountLabel(label, amount, this.currencyCode(), {
+      maxCharacters,
+      sourceTenThousandDecimals: sourceDecimals,
+      sourceHundredMillionDecimals: sourceDecimals,
+      ...options,
+    });
   }
 
   private requireSeat(localSeatId: number): Node {

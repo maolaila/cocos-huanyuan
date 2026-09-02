@@ -1,5 +1,6 @@
 import { Label, Node, isValid } from 'cc';
 import { GameContext } from './GameContext';
+import { constrainSingleLineLabel, formatDzpkCurrencyAmount } from './DzpkUiHelpers';
 
 export interface ConfirmationRequest {
   okCB?: () => void;
@@ -22,6 +23,7 @@ export class DzpkUiMessageService {
       console.warn(`[DZPK] ${normalizedMessage}`);
       return;
     }
+    constrainSingleLineLabel(this.messageLabel);
     this.messageLabel.string = normalizedMessage;
     this.messageLabel.node.active = true;
     if (this.hideMessageTimer) clearTimeout(this.hideMessageTimer);
@@ -34,6 +36,7 @@ export class DzpkUiMessageService {
 
   public showLoadingIndicator(): void {
     if (!this.messageLabel) return;
+    constrainSingleLineLabel(this.messageLabel);
     this.messageLabel.string = '正在连接 GameHub…';
     this.messageLabel.node.active = true;
   }
@@ -60,7 +63,17 @@ export class DzpkUiMessageService {
   }
 
   public enterRoomFailTips(minimumGoldAmount: number): void {
-    this.showTransientMessage(`进入该房间至少需要 ${minimumGoldAmount} 筹码`);
+    const displayAmount = formatDzpkCurrencyAmount(
+      minimumGoldAmount,
+      this.gameContext.currency,
+      {
+        maxCharacters: 8,
+        sourceTenThousandDecimals: 1,
+        sourceHundredMillionDecimals: 1,
+        includeCurrencySymbol: true,
+      },
+    );
+    this.showTransientMessage(`进入该房间至少需要 ${displayAmount} 筹码`);
   }
 
   public showGameOutTips(request: ConfirmationRequest): void {
