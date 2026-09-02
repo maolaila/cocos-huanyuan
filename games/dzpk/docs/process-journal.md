@@ -576,8 +576,9 @@
   传给 parentOrigin，TAB/POPUP 不生成该字段。生成 launch 的 Origin/User-Agent 必须与消费浏览器一致。
 - PreventionRule：每个本地/线上 Cocos launch 测试矩阵必须分开覆盖 TRIAL/REAL 与 TAB/IFRAME；
   HTTP 200 不能替代实际 context/init 的绑定校验。
-- ResolutionStatus：TRIAL/TAB 在线接口与本地 Cocos 已通过；IFRAME 修复已配 focused test，待最终精确
-  提交部署后再次探针确认。
+- ResolutionStatus：TRIAL/TAB 在线接口与本地 Cocos 已通过；GameHub `bce227bd` / Jenkins 200
+  部署后，HTTPS Merchant Admin Origin 的 TRIAL/IFRAME 探针返回 code 0 与 openMode IFRAME；HTTP
+  localhost 被 HTTPS-only IFRAME 安全边界正确拒绝。
 
 ### `DZPK-PIT-044` — source Out retire 后必须同步清 Hall room lifecycle
 
