@@ -107,8 +107,7 @@ export class DzpkTablePresentation extends Component {
     const roomNames = ['体验场', '新手场', '初级场', '中级场', '高级场'];
     const sourceFallbackDescriptions = ['1万/2万  前注:20万', '1千/2千  前注:2万', '5千/1万  前注:10万'];
     const roomName = roomNames[roomLevelIndex] ?? roomNames[0];
-    const roomConfiguration = gameContext.roomConfig[String(roomLevelIndex + 1)]
-      as TableRoomConfiguration | undefined;
+    const roomConfiguration = gameContext.roomConfig[String(roomLevelIndex + 1)] as TableRoomConfiguration | undefined;
     const smallBlindAmount = Number(roomConfiguration?.doublescore) || 0;
     const anteAmount = Number(roomConfiguration?.vals?.ante) || 0;
     const blindDescription = smallBlindAmount > 0 && anteAmount > 0

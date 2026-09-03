@@ -4,8 +4,8 @@
 - KG gameId / gtype：`119 / 19`
 - 执行模式：`HUMAN_CHECKPOINTS`
 - 活标准：`kg-cocos-restoration-to-gamehub-v1`
-- 当前阶段：Creator 3.8.8 多币种动态文本/金额布局修正已完成代码审计，等待 HUMAN_CHECKPOINTS 人工视觉复核；此前 REAL/TRIAL、控钱、双后台对账和双进双出资金证据继续有效
-- 当前结论：2.4 基线已冻结；3.8 本地完整牌局和 GameHub 资金/控制链已验证；本次 CNY/USD/VND 显示层变化使旧 Cocos 视觉截图失效，S3 不可变包、官网公开入口、AI-QA v5、真实设备与生产加固仍未完成
+- 当前阶段：Creator 3.8.8 多币种动态文本/金额布局修正已通过源码解析和发布型 Web Mobile 构建，等待 HUMAN_CHECKPOINTS 人工视觉复核；此前 REAL/TRIAL、控钱、双后台对账和双进双出资金证据继续有效
+- 当前结论：2.4 基线已冻结；3.8 本地完整牌局和 GameHub 资金/控制链已验证；本次 CNY/USD/VND 显示层变化使旧 Cocos 视觉截图失效，本地 S3-ready 构建已生成，但 S3 不可变包发布/公开验证、官网公开入口、AI-QA v5、真实设备与生产加固仍未完成
 
 本日志记录真实决策、失败和恢复点。较新的失败会撤销受影响的旧检查点，但不会抹去仍然正确的
 规则、机器人、快照或后端基础成果。
@@ -639,6 +639,50 @@
   整数矩阵检查 Room、Table、操作按钮、结算、提示和移动横屏；缩写只能是显示层。
 - ResolutionStatus：代码和源 Prefab/Label 尺寸静态审计完成；按 HUMAN_CHECKPOINTS 约束不执行机器
   编译/预览，等待人工以 Creator 3.8.8 复核。
+
+### `DZPK-PIT-048` — 最新多币种改动再次拆断 TypeScript 类型断言
+
+- ObservedAt：2026-09-03；Game：`dzpk-955`；Stage：Creator 3.8.8 release build。
+- Symptom：打开 `develop@4aa83c7` 时，Creator 在 `DzpkTablePresentation.ts:111` 报
+  `Missing semicolon`，Scene 无法正常加载。
+- Evidence：最新源码把 `as TableRoomConfiguration | undefined` 放到属性访问下一行；既有
+  `build/web-mobile` 生成于该提交之前，不能证明最新源码可编译。
+- RootCause：多币种布局提交重复违反 `DZPK-PIT-006` 的同表达式类型断言规则，且提交后未跑
+  Creator 构建。
+- RejectedApproach：清空 `library/temp` 掩盖源码错误，或继续复用早于源码的旧构建作为通过证据。
+- Decision：只合并类型断言语句，不改变房间配置、金额、事件或展示逻辑；扫描 27 个 runtime
+  TypeScript 文件，并用 Creator 3.8.8 生成 `debug=false` Web Mobile 构建。
+- FilesOrArtifacts：`creator-3.8.x-upgrade/assets/DZPK/_semantic/DzpkTablePresentation.ts`；
+  `creator-3.8.x-upgrade/build/s3-ready-20260903-final/web-mobile`；builder log
+  `creator-3.8.x-upgrade/temp/builder/log/web-mobile2026-9-3 17-22.log`。
+- GateInvalidated：`4aa83c7` 最新源码可直接打开/构建的旧口头结论；既有资金、回合和后台对账证据
+  不受影响，多币种人工视觉门继续保持失效状态。
+- PreventionRule：任何 Creator TypeScript 修改都必须先做全 runtime 解析扫描，再以晚于源码的
+  Creator 构建、最终 bundle 身份和静态 HTTP 全树校验收口；不得用较早 build 证明较新源码。
+- ResolutionStatus：27/27 源文件解析通过；Creator exit `36`，builder `Finished`；发布构建
+  `703/703` 文件经 HTTP 按字节返回，tree SHA-256
+  `4cbc3d12749eb620a71495bcfaa114a96562b7fb4fd0ab3010889fa2a50971cc`。仍等待 CNY/USD/VND 人工视觉复核，
+  且尚未执行 S3 上传或公开验证。
+
+### `DZPK-PIT-049` — 未使用的内置 Cocos Service 面板污染编辑器控制台
+
+- ObservedAt：2026-09-03；Game：`dzpk-955`；Stage：Creator 3.8.8 editor reopen。
+- Symptom：项目脚本完成解析后，Console 仍显示 `msg not exist!`，堆栈全部位于 Creator 安装目录的
+  `extension/cocos-service/service/pages/index.js`。
+- Evidence：Creator 用户窗口布局把未激活的 `cocos-service` 与 Inspector 一起常驻加载；当前工程和
+  用户 Cocos Service profile 的 `services` 均为空。Scene 随后继续完成引擎与物理模块初始化。
+- RootCause：内置 Service 面板在没有对应 service listener 时调用 `pluginMsg`，面板自身拒绝不存在的
+  消息；该错误不来自 DZPK assets、序列化或构建产物。
+- RejectedApproach：修改 Creator `app.asar`、在游戏代码里吞错、伪造 service listener，或把该扩展错
+  当成 DZPK runtime 依赖。
+- Decision：保留 Creator 安装和游戏代码不变，只从当前编辑器窗口布局移除未使用的 Service 标签；原
+  布局备份为 `C:\Users\maola\.CocosCreator\editor\window.json.before-dzpk-cocos-service-fix-20260903`，
+  以后仍可从 Creator 的 Panel 菜单重新打开 Service。
+- GateInvalidated：无；这是编辑器 UI 扩展噪声，不影响已生成的 Web Mobile 包或资金/回合证据。
+- PreventionRule：Creator Console 报错先按堆栈区分项目脚本、Scene runtime、构建器和内置扩展；内置
+  面板问题不得通过修改游戏业务代码或 Creator 安装文件解决。
+- ResolutionStatus：重启同一 DZPK 工程后，Scene/脚本加载完成，`msg not exist!`、`SyntaxError` 和
+  `Missing semicolon` 均为 0；仅保留 Creator 账号登录服务器连接超时 Warning。
 
 ## 4. 当前恢复点
 
