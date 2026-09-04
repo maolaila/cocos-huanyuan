@@ -1,3 +1,20 @@
+/**
+ * 学习导读：这是 DZPK 表现层共用的“小工具箱”，集中解决金额、昵称、字体、颜色、坐标、Spine、
+ * 头像资源等重复问题。它只改变显示，不参与发牌、下注合法性或钱包结算。
+ *
+ * Cocos API 速查：
+ * - `Color`：RGBA 颜色值；Sprite、Label、Spine 都能用 color 做正常/灰化表现。
+ * - `Label`：文本组件；`font=null` 表示使用系统字体，`Overflow.SHRINK` 会在原框内自动缩字号。
+ * - `Sprite/SpriteFrame/SpriteAtlas`：图片组件、具体图片帧及打包图集。
+ * - `UIOpacity`：整棵节点树透明度，0–255；适合 Tween 淡入淡出。
+ * - `Vec3`：节点位置和坐标转换结果。
+ * - `assetManager.resources.load`：从全局 `resources` Bundle 按路径异步加载资源。
+ * - `sp.Skeleton`：Creator 对 Spine 骨骼动画的组件类型。
+ * - `isValid`：异步资源加载完成时确认目标组件还没被销毁。
+ *
+ * 重点：`WeakMap` 以 Label/Node 为键保存运行态信息，不会把临时字段写进原 Prefab 节点；节点销毁后
+ * WeakMap 不会阻止垃圾回收。这是替代旧版“随手给 node 增加属性”的安全做法。
+ */
 import {
   Color,
   Label,
@@ -51,12 +68,13 @@ interface CompactUnit {
 }
 
 const originalLabelStateByLabel = new WeakMap<Label, OriginalLabelState>();
+// 单位从大到小排列，格式化时选择第一个不大于金额的单位。
 const CNY_COMPACT_UNITS: readonly CompactUnit[] = [
   { scale: 1_000_000_000_000, suffix: '万亿' },
   { scale: 100_000_000, suffix: '亿' },
   { scale: 10_000, suffix: '万' },
 ];
-// Unicode CLDR/Intl vi-VN compact forms: nghìn, triệu, tỷ and nghìn tỷ.
+// 越南常见缩写：N=nghìn(千)、Tr=triệu(百万)、T=tỷ(十亿)、NT=nghìn tỷ(万亿)。
 const VND_COMPACT_UNITS: readonly CompactUnit[] = [
   { scale: 1_000_000_000_000, suffix: 'NT' },
   { scale: 1_000_000_000, suffix: 'T' },
@@ -71,19 +89,20 @@ const INTERNATIONAL_COMPACT_UNITS: readonly CompactUnit[] = [
 ];
 
 export function formatSourceInteger(value: unknown): string {
+  // 原 Lobby 只显示整数筹码：显示层向下取整，并加千分位逗号。
   const numericValue = Number(value);
   if (!Number.isFinite(numericValue)) return '0';
   return Math.floor(numericValue).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
-/** Original KG lobby style: the client displays whole chips; GameHub keeps exact money server-side. */
+/** 原 KG Lobby 风格：客户端显示整筹码；GameHub 服务端仍保留六位小数真钱。 */
 export function formatSourceWalletBalance(value: unknown): string {
   return formatSourceInteger(value);
 }
 
 /**
- * Original handleNameLen semantics. CJK may consume the final two-unit slot;
- * table labels pass appendEllipsis=false exactly like DZPKView.setPlayerInfo.
+ * 原 `handleNameLen` 语义：ASCII/半角算 1 格，中文等宽字符算 2 格。
+ * 牌桌按原 DZPKView.setPlayerInfo 传 appendEllipsis=false，避免窄座位名被省略号挤出。
  */
 export function truncateSourceDisplayName(
   value: unknown,
@@ -102,7 +121,7 @@ export function truncateSourceDisplayName(
   return appendEllipsis ? `${truncatedText}...` : truncatedText;
 }
 
-/** Keeps the ellipsis inside a fixed-width lobby label instead of adding it after the budget. */
+/** Room 昵称专用：把 `...` 也算进总宽度预算，避免截断后反而多出三格。 */
 export function fitSourceDisplayName(value: unknown, maxDisplayUnits: number): string {
   const sourceText = String(value ?? '');
   if (displayUnitLength(sourceText) <= maxDisplayUnits) return sourceText;
@@ -119,7 +138,7 @@ export function fitSourceDisplayName(value: unknown, maxDisplayUnits: number): s
   return `${fittedText}${ellipsis}`;
 }
 
-/** Exact 2.4 Utils.goldFormat semantics used by the original DZPK labels. */
+/** 精确保留 2.4 `Utils.goldFormat` 的 CNY 万/亿显示语义。 */
 export function formatOriginalGold(
   value: unknown,
   tenThousandDecimals = 1,
@@ -134,7 +153,10 @@ export function formatOriginalGold(
   return `${roundFixed(amount / 100_000_000, hundredMillionDecimals)}亿`;
 }
 
-/** Currency-aware display only. The returned text must never become a wallet or bet input. */
+/**
+ * 多币种显示入口。先把值规范成非负整数，再按 CNY/VND/国际单位缩短到 `maxCharacters`。
+ * 返回值只能写进 Label，绝不能重新作为 wallet、bet 或 settlement 输入。
+ */
 export function formatDzpkCurrencyAmount(
   value: unknown,
   currencyCode: unknown,
@@ -182,6 +204,11 @@ export function formatDzpkCurrencyAmount(
   );
 }
 
+/**
+ * 把金额安全写入原 Label：
+ * 1. 给前后缀预留字符预算；2. 生成短金额；3. 检查原 BMFont 是否具备所有字形；
+ * 4. 仅在缺字时让这一个 Label 回退 Arial；5. 在原 UITransform 宽度内 SHRINK，禁止撑开布局。
+ */
 export function applyDzpkAmountLabel(
   label: Label,
   value: unknown,
@@ -227,16 +254,19 @@ export function applyDzpkAmountLabel(
 }
 
 export function constrainSingleLineLabel(label: Label): void {
+  // SHRINK 会自动减小字号直到放下；关闭 wrap 防止金额/提示突然变成两行。
   rememberOriginalLabelState(label);
   label.overflow = Label.Overflow.SHRINK;
   label.enableWrapText = false;
 }
 
 export function hideOriginalChildNodes(parentNode: Node | null): void {
+  // 常用于牌面：先隐藏模板中所有点数/花色子节点，再只打开当前牌需要的三部分。
   parentNode?.children.forEach((childNode) => { childNode.active = false; });
 }
 
 export function setOriginalNodeColor(targetNode: Node, color: Readonly<Color>): void {
+  // 递归同时处理 Sprite、Label、Spine，使弃牌灰化覆盖头像、文字和牌，而不改原资源。
   const sprite = targetNode.getComponent(Sprite);
   if (sprite) sprite.color = new Color(color);
   const label = targetNode.getComponent(Label);
@@ -246,7 +276,10 @@ export function setOriginalNodeColor(targetNode: Node, color: Readonly<Color>): 
   targetNode.children.forEach((childNode) => setOriginalNodeColor(childNode, color));
 }
 
-/** Converts the source node anchor position into the target node's local space. */
+/**
+ * 把 sourceNode 锚点的世界坐标转换成 targetNode 的局部坐标。
+ * 飞牌/飞筹码的起点和终点通常位于不同父节点，不能直接拿二者 `position` 相减。
+ */
 export function convertNodeOriginToLocal(sourceNode: Node, targetNode: Node): Vec3 {
   const sourceWorldPosition = sourceNode.worldPosition;
   return targetNode.inverseTransformPoint(
@@ -256,10 +289,15 @@ export function convertNodeOriginToLocal(sourceNode: Node, targetNode: Node): Ve
 }
 
 export function applyNodeOpacity(targetNode: Node, opacity: number): void {
+  // 节点没有 UIOpacity 时才补；随后同一个组件可交给 tween 做淡入淡出。
   const uiOpacity = targetNode.getComponent(UIOpacity) ?? targetNode.addComponent(UIOpacity);
   uiOpacity.opacity = opacity;
 }
 
+/**
+ * 播放原 Spine 动画。先清旧完成监听，避免重复打开页面后一次结束触发多个回调；非循环动画完成后
+ * 再清一次监听。`setAnimation(0, name, loop)` 的 0 表示 Spine 第 0 条轨道。
+ */
 export function playOriginalSpine(
   spineNode: Node,
   animationName: string,
@@ -278,6 +316,9 @@ export function playOriginalSpine(
   skeleton.setAnimation(0, animationName, loop);
 }
 
+/**
+ * 从原 Hall 头像图集选择 12 张头像之一。加载异步完成后先 `isValid`，避免玩家已离桌仍写 Sprite。
+ */
 export async function setOriginalAvatar(avatarSprite: Sprite, avatarIndex: unknown): Promise<void> {
   const headAtlas = await loadResourcesAsset('Hall/Head/plist_head', SpriteAtlas);
   const normalizedIndex = Math.abs(Number(avatarIndex) || 0) % 12;
@@ -287,6 +328,7 @@ export async function setOriginalAvatar(avatarSprite: Sprite, avatarIndex: unkno
 }
 
 function loadResourcesAsset<T>(path: string, assetType: new (...args: never[]) => T): Promise<T> {
+  // 把 Cocos callback 加载包装成 Promise；泛型 T 让调用者拿到 SpriteAtlas 等明确类型。
   return new Promise((resolve, reject) => {
     assetManager.resources.load(path, assetType as never, (loadError, asset) => {
       if (loadError || !asset) {
@@ -299,6 +341,7 @@ function loadResourcesAsset<T>(path: string, assetType: new (...args: never[]) =
 }
 
 function displayUnitLength(sourceText: string): number {
+  // 按旧版近似视觉宽度计数，而不是 JS string.length；for...of 能正确遍历 Unicode 字符。
   let displayUnits = 0;
   for (const character of sourceText) {
     const codePoint = character.codePointAt(0) ?? 0;
@@ -311,6 +354,7 @@ function displayUnitLength(sourceText: string): number {
 }
 
 function rememberOriginalLabelState(label: Label): OriginalLabelState {
+  // 第一次改 Label 时冻结原字体/字号/overflow；后续币种切换可以可靠恢复原美术状态。
   const rememberedState = originalLabelStateByLabel.get(label);
   if (rememberedState) return rememberedState;
   const originalState: OriginalLabelState = {
@@ -326,6 +370,7 @@ function rememberOriginalLabelState(label: Label): OriginalLabelState {
 }
 
 function bitmapFontSupports(displayText: string, profile: DzpkBitmapFontProfile): boolean {
+  // 这里只声明已盘点过的字形集合；匹配失败就局部回退系统字体，避免 BMFont 显示空方块。
   switch (profile) {
     case 'DIGITS_AND_COMMA': return /^[0-9,]+$/.test(displayText);
     case 'CNY_INTEGER_UNITS': return /^[0-9万亿千百]+$/.test(displayText);
@@ -335,6 +380,7 @@ function bitmapFontSupports(displayText: string, profile: DzpkBitmapFontProfile)
 }
 
 function normalizeDisplayAmount(value: unknown): number {
+  // 金额格式化只接受有限正数；显示层统一向下取整以贴合原整数筹码。
   const numericValue = Number(value);
   if (!Number.isFinite(numericValue) || numericValue <= 0) return 0;
   return Math.floor(numericValue);
@@ -357,6 +403,7 @@ function formatScaledAmount(
   suffix: string,
   decimalSeparator: '.' | ',',
 ): string {
+  // 先选单位，再从较精细小数逐步减少，直到前缀+数字+单位+后缀能放进字符预算。
   let selectedUnitIndex = units.findIndex((unit) => amount >= unit.scale);
   if (selectedUnitIndex < 0) {
     return `${prefix}${Math.floor(amount)}${suffix}`;
@@ -364,6 +411,7 @@ function formatScaledAmount(
   let selectedUnit = units[selectedUnitIndex];
   let scaledAmount = amount / selectedUnit.scale;
   if (scaledAmount >= 999.5 && selectedUnitIndex > 0) {
+    // 例如 999.9M 四舍五入会像 1000M；提前升级到 1B，既短又符合阅读习惯。
     selectedUnitIndex -= 1;
     selectedUnit = units[selectedUnitIndex];
     scaledAmount = amount / selectedUnit.scale;
@@ -381,6 +429,7 @@ function formatScaledAmount(
 }
 
 function trimFixed(value: number, decimalPlaces: number): string {
+  // toFixed 保证四舍五入，再去掉无意义尾零；不会留下 `1.00M`。
   return value.toFixed(Math.max(0, decimalPlaces))
     .replace(/\.0+$/, '')
     .replace(/(\.\d*?)0+$/, '$1');
@@ -391,10 +440,12 @@ function localizeDecimalSeparator(value: string, decimalSeparator: '.' | ','): s
 }
 
 function textCharacterLength(value: string): number {
+  // Array.from 按 Unicode code point 计数，避免代理对字符被算成两个。
   return Array.from(value).length;
 }
 
 function roundFixed(value: number, decimalPlaces: number): string {
+  // 保留原 goldFormat 固定小数位行为，因此这里不会 trim 尾零。
   const safeDecimalPlaces = Math.max(0, Math.floor(decimalPlaces));
   const multiplier = 10 ** safeDecimalPlaces;
   return (Math.round(value * multiplier) / multiplier).toFixed(safeDecimalPlaces);

@@ -1,3 +1,21 @@
+/**
+ * 学习导读：这是原 DZPKMain 321 节点 Prefab 的“表现层”。它只负责找原节点、换图片/文字、控制显隐
+ * 和播放动画；它不决定谁赢、不洗牌、不校验真钱。业务顺序由 DzpkTableGameController 调用。
+ *
+ * 本文件常用的 Cocos 3.8 API：
+ * - `Node`：场景树节点；`active/parent/children/position/scale/angle` 分别控制显隐、层级和变换。
+ * - `Component` 与 `@property`：本组件及 Inspector 绑定的原节点/图集，字段名不可随意修改。
+ * - `Sprite/SpriteFrame/SpriteAtlas`：把牌背、牌面、花色、动作和牌型图片放入原 Sprite。
+ * - `Label`：显示筹码/底池/房间文字；金额统一在原宽度内压缩，不改变真实数值。
+ * - `Button/Toggle/Slider/ProgressBar`：操作按钮、自动操作选择、加注滑杆及其可见进度。
+ * - `Animation`：播放 Creator 动画剪辑；3.8 中 `play()` 返回 void，要再 `getState()` 调速度。
+ * - `tween/Tween`：补间位置、缩放、旋转、透明度；`Tween.stopAllByTarget` 停止同节点旧动画。
+ * - `instantiate`：克隆原结算/牌/筹码模板；高频牌和筹码通过 DzpkNodePool 回收复用。
+ * - `scheduleOnce`：随组件生命周期执行延迟回调；`isValid` 防止回调操作已销毁的临时节点。
+ * - `view.getVisibleSize()`：按真实屏宽调整原 All-in 横幅比例。
+ *
+ * 阅读建议：先看 initialize 和座位/牌面渲染，再看下注控件，最后看发牌、收筹码、派奖和摊牌动画。
+ */
 import {
   Animation, Button, Component, Event, Label, Node, ProgressBar, Slider, Sprite,
   SpriteAtlas, Toggle, Tween, Vec3, instantiate, isValid, tween, view, _decorator,
@@ -49,12 +67,10 @@ interface TableRoomConfiguration {
   vals?: { ante?: number | string };
 }
 
-/**
- * Creator 3.8 presentation for the original DZPKMain Prefab.
- * Rendering APIs and timing are migrated; the source node tree is not redrawn.
- */
+/** Creator 3.8 原 DZPKMain 表现层：只迁移渲染 API 和时序，不重画 source 节点树。 */
 @ccclass('DzpkTablePresentation')
 export class DzpkTablePresentation extends Component {
+  // 这些字段由官方导入后的 Prefab Inspector 绑定；null 表示迁移丢绑定，运行时会明确报错。
   @property(Node) public opponentWaitingTipNode: Node | null = null;
   @property(Node) public participantSeatRootNode: Node | null = null;
   @property(Label) public totalPotLabel: Label | null = null;
@@ -68,9 +84,16 @@ export class DzpkTablePresentation extends Component {
   private chipNodePool: DzpkNodePool | null = null;
   private allInBannerToken = 0;
   private readonly countdownTokenBySeat = Array<number>(SOURCE_TABLE_SEAT_COUNT).fill(0);
+  // WeakMap 保存临时运行态，不把 sourcePosition/betGold 等自造属性写到 Cocos Node 上。
   private readonly sourcePositionByNode = new WeakMap<Node, Vec3>();
   private readonly contributionByButtonNode = new WeakMap<Node, number>();
 
+  // ────────────────── 1. 初始化、房间标题和座位资料 ──────────────────
+
+  /**
+   * 牌桌首次初始化：隐藏六座模板、渲染房间标题、用原 item 预热牌/筹码池、清公共牌和对手底牌，
+   * 再启动原环境 Spine。模板放入 NodePool 后不再作为场景中的可见节点。
+   */
   public initializeTablePresentation(): void {
     this.viewerMaximumChipAmount = 0;
     this.minimumRaiseContributionChips = 0;
@@ -92,12 +115,15 @@ export class DzpkTablePresentation extends Component {
     allInBanner.setScale(bannerScale.x, view.getVisibleSize().width / 1334, bannerScale.z);
   }
 
+  /** 牌桌销毁时清两个对象池，避免返回 Room 后仍持有旧节点。 */
   public onDestroy(): void {
     this.cardNodePool?.clear();
     this.chipNodePool?.clear();
   }
 
-  /** The source selects this title before RoomInfo arrives, using roomLevel. */
+  /**
+   * RoomInfo 到来前按 gameContext.roomLevel 显示标题；配置存在时用动态盲注/前注，否则保留原文案兜底。
+   */
   public renderOriginalRoomTitle(): void {
     const { gameContext } = requireDzpkRuntimeServices();
     const roomLevelIndex = Math.max(
@@ -123,6 +149,7 @@ export class DzpkTablePresentation extends Component {
     roomTitleLabel.string = `${roomName}  小/大盲注:${blindDescription}`;
   }
 
+  /** 播放一次原桌面随机 Spine，完成后若组件仍存在，再随机播放下一段；不影响牌局随机。 */
   public playAmbientTableAnimation(animationIndex: number): void {
     const ambientSpineNode = requireChild(this.node, 'spine');
     playOriginalSpine(ambientSpineNode, `suiji${animationIndex}`, false, () => {
@@ -130,6 +157,10 @@ export class DzpkTablePresentation extends Component {
     });
   }
 
+  /**
+   * 控制一个座位加入/离开：先停止旧 Tween；加入从屏外滑入，离开滑出后才 inactive。
+   * `participantState=null` 只清画面，不等于服务端删除玩家。
+   */
   public setParticipantSeatPresence(
     localSeatId: number,
     participantState: DzpkParticipantState | null,
@@ -152,6 +183,7 @@ export class DzpkTablePresentation extends Component {
       .start();
   }
 
+  /** 把头像、三显示单位短昵称和筹码写入原 info 节点；头像加载失败只告警，不阻塞牌局。 */
   public renderParticipantProfile(localSeatId: number, participantState: DzpkParticipantState): void {
     const informationNode = requireChild(this.requireSeat(localSeatId), 'info');
     const headSprite = requireComponent(requireChild(informationNode, 'head'), Sprite);
@@ -168,6 +200,7 @@ export class DzpkTablePresentation extends Component {
     this.renderParticipantChipBalance(localSeatId, participantState.stackChips);
   }
 
+  /** 在每个座位原 gold Label 中用当前币种短格式显示桌上筹码。 */
   public renderParticipantChipBalance(localSeatId: number, chipAmount: number): void {
     const goldNode = requireChild(requireChild(this.requireSeat(localSeatId), 'info'), 'gold');
     this.renderAmountLabel(
@@ -178,6 +211,7 @@ export class DzpkTablePresentation extends Component {
     );
   }
 
+  /** 清一个座位上一手的动作、倒计时、下注和底牌，但不删除玩家资料。 */
   public resetParticipantSeatPresentation(localSeatId: number): void {
     this.renderParticipantActionBadge(localSeatId, null);
     this.renderParticipantActionCountdown(localSeatId, null);
@@ -186,6 +220,12 @@ export class DzpkTablePresentation extends Component {
     this.setParticipantFoldedAppearance(localSeatId, true);
   }
 
+  // ────────────────── 2. 玩家动作、倒计时、下注和底牌 ──────────────────
+
+  /**
+   * 把 source 动作码映射到原图集 `t*.png`，并切换昵称/All-in 小标。All-in 还显示 3 秒全桌横幅；
+   * token 保证较新的横幅不会被旧定时回调提前关闭。
+   */
   public renderParticipantActionBadge(
     localSeatId: number,
     sourceActionCode: number | string | null,
@@ -214,6 +254,11 @@ export class DzpkTablePresentation extends Component {
     }, 3);
   }
 
+  /**
+   * 播放座位原倒计时 Animation。Creator 3.8 `play()` 不返回 AnimationState，所以先 play，再用
+   * `defaultClip.name -> getState()` 设置速度，使完整剪辑刚好在 remainingSeconds 内播完。
+   * viewer 剩 3 秒时播放提示音；每座 token 防止旧计时器误响。
+   */
   public renderParticipantActionCountdown(localSeatId: number, remainingSeconds: number | null): void {
     const countdownToken = ++this.countdownTokenBySeat[localSeatId];
     const countdownNode = requireChild(requireChild(this.requireSeat(localSeatId), 'info'), 'prog');
@@ -234,6 +279,10 @@ export class DzpkTablePresentation extends Component {
     }
   }
 
+  /**
+   * 显示座位下注。无需动画时直接改原 Label；需要动画时从筹码池依次取 3 个节点飞到下注锚点，
+   * 回收后才显示最终下注牌。坐标通过世界->局部转换，因 seat 和 chipRoot 不在同一父节点。
+   */
   public async animateParticipantWager(
     localSeatId: number,
     wagerChips: number | null,
@@ -278,6 +327,9 @@ export class DzpkTablePresentation extends Component {
     renderWager();
   }
 
+  /**
+   * viewer(本地 0 号位)显示真实两张牌；对手仅由发牌动画显示牌背，结算前不泄露底牌；弃牌时隐藏。
+   */
   public renderParticipantHoleCards(
     localSeatId: number,
     sourceCards: readonly number[] | null,
@@ -304,6 +356,7 @@ export class DzpkTablePresentation extends Component {
     });
   }
 
+  /** 弃牌玩家整块 info 递归灰化；恢复时回原白色。 */
   public setParticipantFoldedAppearance(localSeatId: number, isActiveParticipant: boolean): void {
     setOriginalNodeColor(
       requireChild(this.requireSeat(localSeatId), 'info'),
@@ -311,6 +364,7 @@ export class DzpkTablePresentation extends Component {
     );
   }
 
+  /** 初始化/清场时隐藏 1–5 号对手底牌并恢复颜色，0 号 viewer 单独处理。 */
   public hideAllOpponentHoleCards(): void {
     for (let localSeatId = 1; localSeatId < SOURCE_TABLE_SEAT_COUNT; localSeatId += 1) {
       const participantCardRoot = requireChild(this.requireSeat(localSeatId), 'poker');
@@ -319,6 +373,11 @@ export class DzpkTablePresentation extends Component {
     }
   }
 
+  // ────────────────── 3. 扑克牌图片、庄位和底池 ──────────────────
+
+  /**
+   * 把 source 牌码（点数×100 + 1-based 花色）转换成原图集帧名；A 的 source 点数 14 映射图片编号 1。
+   */
   public resolvePokerSpriteFrameNames(sourceCardCode: number): {
     rankFrameName: string;
     largeSuitFrameName: string;
@@ -334,9 +393,13 @@ export class DzpkTablePresentation extends Component {
     };
   }
 
+  /**
+   * 在原牌节点中分别替换 `p` 点数、`xh` 大花色、`dh` 角标小花色。这里修复过大小花色误用，
+   * 必须继续遵循原 79×83 大图和 32×32 小图映射。
+   */
   public renderCardFace(sourceCardCode: number, cardNode: Node): void {
     const frameNames = this.resolvePokerSpriteFrameNames(sourceCardCode);
-    // Source DZPKView maps xh to the 79x83 large suit and dh to the 32x32 corner suit.
+    // 原 DZPKView：xh 对应 79×83 大花色，dh 对应 32×32 角标花色。
     const frameNameByChild: Record<string, string> = {
       p: frameNames.rankFrameName,
       xh: frameNames.largeSuitFrameName,
@@ -352,6 +415,7 @@ export class DzpkTablePresentation extends Component {
     });
   }
 
+  /** 把全桌唯一 D 庄标移动到目标座位预留锚点；已有显示时用 Tween 平滑移动。 */
   public renderDealerButtonAtSeat(localSeatId: number): void {
     const dealerAnchorNode = requireChild(this.requireSeat(localSeatId), 'D');
     const dealerButtonNode = requireChild(this.node, 'BankD');
@@ -365,12 +429,16 @@ export class DzpkTablePresentation extends Component {
     dealerButtonNode.setPosition(targetPosition);
   }
 
+  /** 更新顶部“底池:”文字；单行 SHRINK 防止 VND/大额覆盖公共牌。 */
   public renderTotalPotAmount(totalPotChips: number): void {
     const totalPotLabel = requireBinding(this.totalPotLabel, 'totalPotLabel');
     constrainSingleLineLabel(totalPotLabel);
     totalPotLabel.string = `底池:${this.formatTableAmount(totalPotChips, 7, 2)}`;
   }
 
+  /**
+   * 显示已归集中央底池。收筹码动画结束后延迟回收 chipRoot 子节点，避免还在飞行时被池移走。
+   */
   public renderCollectedPotAmount(
     collectedPotChips: number | null,
     shouldRecoverChipNodes = true,
@@ -389,6 +457,7 @@ export class DzpkTablePresentation extends Component {
     );
   }
 
+  /** 准备 viewer 距最高下注差额的原节点；按 source 行为先写值但保持隐藏，等待对应动画使用。 */
   public renderWagerDifferenceAmount(differenceChips: number): void {
     if (!differenceChips) return;
     const differenceNode = requireNode('label/cazhi', this.node);
@@ -398,10 +467,11 @@ export class DzpkTablePresentation extends Component {
       6,
       2,
     );
-    // Preserved source behavior: prepared but hidden until its source animation uses it.
+    // 原行为是“先准备文字、暂不显示”，不能因为看到 active=false 就当成无用代码删除。
     differenceNode.active = false;
   }
 
+  /** 同一时间只显示 tips 下指定的一个原图片提示，例如等待其他玩家或等待下一局。 */
   public showTableStatusTip(tipNodeName: string, shouldShowTip: boolean): void {
     const tipRootNode = requireChild(this.node, 'tips');
     hideOriginalChildNodes(tipRootNode);
@@ -409,6 +479,12 @@ export class DzpkTablePresentation extends Component {
     if (selectedTipNode) selectedTipNode.active = shouldShowTip;
   }
 
+  // ────────────────── 4. 操作按钮与加注滑杆 ──────────────────
+
+  /**
+   * 在 `btn` 下切换 bet/auto 操作层。先把所有子树 inactive 且 Button/Toggle 不可交互，避免隐藏节点
+   * 仍被点击；轮到自己时再根据翻牌前后选择档位组，并逐个校验最低跟注和自己的 stack。
+   */
   public showPlayerActionControls(
     controlNodeName: string,
     minimumContributionChips: number,
@@ -453,6 +529,7 @@ export class DzpkTablePresentation extends Component {
     );
   }
 
+  /** 把三个原 Toggle 同步为互斥选择；传 -1 表示全部取消。 */
   public synchronizeAutomaticActionToggles(selectedAutomaticActionIndex: number): void {
     const automaticActionRoot = requireNode('btn/auto', this.node);
     automaticActionRoot.children.forEach((automaticActionNode, automaticActionIndex) => {
@@ -462,6 +539,10 @@ export class DzpkTablePresentation extends Component {
     });
   }
 
+  /**
+   * 打开/关闭原加注面板。打开时把五个预设金额写入按钮并用 WeakMap 绑定真实值；加减按钮每次打开
+   * 先 `off` 旧监听再 `on`，防止重复打开后一次点击加多次小盲。
+   */
   public setRaiseSelectionVisible(
     shouldShowRaiseSelection: boolean,
     raisePresetContributions: readonly number[],
@@ -503,6 +584,10 @@ export class DzpkTablePresentation extends Component {
     this.handleRaiseSliderChanged({ progress: 0 });
   }
 
+  /**
+   * 同步加注滑杆全部视觉：夹紧最低合法进度、Slider 与 ProgressBar、Handle 金额、提交按钮绑定、
+   * 满仓 All-in Spine、31 段亮条和火花位置。这里只选显示金额，最终合法性仍由服务端校验。
+   */
   public handleRaiseSliderChanged(sliderEvent?: Event | SliderProgressSource): void {
     const requestedProgress = readSliderProgress(sliderEvent);
     const minimumProgress = this.viewerMaximumChipAmount > 0
@@ -549,6 +634,10 @@ export class DzpkTablePresentation extends Component {
     sliderSparkNode.children[0]?.getComponent(Animation)?.play();
   }
 
+  /**
+   * 点击可能落在按钮内的 Label/Sprite 子节点，因此沿 parent 向上找 WeakMap 绑定值；不解析显示文字，
+   * 避免 `$1K/1Tr/1万` 等格式反向污染下注数值。
+   */
   public readContributionFromButtonTarget(buttonTarget: unknown): number {
     let targetNode = buttonTarget instanceof Node ? buttonTarget : null;
     while (targetNode) {
@@ -559,6 +648,12 @@ export class DzpkTablePresentation extends Component {
     throw new Error('DZPK raise contribution is not bound to the clicked original button');
   }
 
+  // ────────────────── 5. 发牌、收筹码与派奖动画 ──────────────────
+
+  /**
+   * 单张底牌发牌动画。对象池 overlay 从桌面发牌点飞到目标卡位；viewer 的目标卡先是牌背，第二层
+   * overlay 完成后再统一翻为真实牌面，对手始终保留牌背直到 Result 摊牌。
+   */
   public async animateHoleCardDeal(
     localSeatId: number,
     participantCards: readonly number[],
@@ -597,6 +692,7 @@ export class DzpkTablePresentation extends Component {
     });
   }
 
+  /** 从某座下注锚点连续生成 4 个筹码飞向中央底池，完成后隐藏原座位下注牌。 */
   public async animateWagerCollectionToPot(localSeatId: number): Promise<void> {
     const wagerImageNode = requireArrayItem(
       requireChild(this.requireSeat(localSeatId), 'bet').children,
@@ -619,6 +715,7 @@ export class DzpkTablePresentation extends Component {
     wagerImageNode.parent.active = false;
   }
 
+  /** 对所有实际获得派彩/退回的座位并行播放中央底池飞筹码。 */
   public animateStandardPotDistribution(
     settlementPresentation: DzpkSettlementPresentation,
   ): Promise<void[]> {
@@ -628,6 +725,9 @@ export class DzpkTablePresentation extends Component {
     );
   }
 
+  /**
+   * 从中央取 5 个池筹码飞到赢家座位，同时在到达后淡出并回收。最后隐藏中央底池并等待一秒。
+   */
   public async animateCentralPotToParticipant(destinationLocalSeat: number): Promise<void> {
     const chipRoot = requireChild(this.node, 'chip');
     const destination = convertNodeOriginToLocal(this.requireSeat(destinationLocalSeat), chipRoot);
@@ -653,6 +753,9 @@ export class DzpkTablePresentation extends Component {
     await this.delaySeconds(1);
   }
 
+  /**
+   * 合并普通派彩与无人跟注退回后逐座显示加钱浮字；主赢家使用原主动画，其余克隆原金额 Label。
+   */
   public renderSettlementAwardLabels(settlement: DzpkSettlementPresentation): void {
     const creditedAmountByUid: Record<string, number> = {};
     settlement.winningParticipantUids.forEach((winnerUid) => {
@@ -673,6 +776,10 @@ export class DzpkTablePresentation extends Component {
     });
   }
 
+  /**
+   * 主赢家金额从座位上浮，2 秒后隐藏；自己获胜播放中央 Spine，其它座位优先用对应原赢家动画，
+   * 没有专用节点时把通用 winspine 移到该座位。
+   */
   public renderPrimaryWinnerAward(winnerLocalSeat: number, winnerAwardChips: number): void {
     const settlementRoot = requireChild(this.node, 'win');
     const originalWinnerLabel = requireChild(settlementRoot, 'winlabel');
@@ -712,6 +819,9 @@ export class DzpkTablePresentation extends Component {
     this.playOneShotSpine(movableWinnerSpine);
   }
 
+  /**
+   * 为边池赢家/无人跟注退回克隆原 winlabel，而不是新建系统样式文字；动画后检查有效性并销毁。
+   */
   public renderClonedOriginalAmountLabel(
     localSeatId: number,
     chipAmount: number,
@@ -745,6 +855,12 @@ export class DzpkTablePresentation extends Component {
       .start();
   }
 
+  // ────────────────── 6. 摊牌、收牌和牌型 ──────────────────
+
+  /**
+   * 结算摊牌：从原 win/lose/bigwin 模板克隆玩家结算卡，显示两张底牌和牌型；先做翻牌弹跳，再把
+   * 不属于最佳五张的底牌灰化。主赢家且牌型等级 > 6 时额外播放原高级牌型 Spine。
+   */
   public async renderParticipantShowdown(
     localSeatId: number,
     participantHoleCards: readonly number[],
@@ -800,6 +916,10 @@ export class DzpkTablePresentation extends Component {
     this.playOneShotSpine(requireChild(premiumAnimationRoot, String(handCategoryIndex)));
   }
 
+  /**
+   * 收牌动画。对手牌直接飞回发牌点并淡出；viewer 的两张牌先旋转缩小收回，再从下方以灰牌形式
+   * 回到等待位置，保留原版“上一手结束”的视觉节奏。
+   */
   public async animateParticipantCardsRecovery(localSeatId: number): Promise<void> {
     const participantCardRoot = requireChild(this.requireSeat(localSeatId), 'poker');
     const recoveryPosition = convertNodeOriginToLocal(requireChild(this.node, 's_pos'), participantCardRoot);
@@ -851,16 +971,19 @@ export class DzpkTablePresentation extends Component {
     }
   }
 
+  /** 隐藏单座动作图片；名字显隐会在下一次 renderParticipantActionBadge 一并恢复。 */
   public hideParticipantActionBadge(localSeatId: number): void {
     requireChild(requireChild(this.requireSeat(localSeatId), 'info'), 'tips').active = false;
   }
 
+  /** 把该座所有牌从结算高亮/弃牌灰化恢复成原白色。 */
   public restoreParticipantHoleCardColors(localSeatId: number): void {
     requireChild(this.requireSeat(localSeatId), 'poker').children.forEach((participantCardNode) => {
       setOriginalNodeColor(participantCardNode, ORIGINAL_WHITE_COLOR);
     });
   }
 
+  /** 解析服务端旧牌型字符串，并在 viewer 座位使用原牌型图集显示；null 表示隐藏。 */
   public renderViewerHandCategory(legacyHandValue: string | null): void {
     const viewerCategoryNode = requireChild(this.requireSeat(0), 'type');
     viewerCategoryNode.active = Boolean(legacyHandValue);
@@ -871,12 +994,20 @@ export class DzpkTablePresentation extends Component {
         .getSpriteFrame(`${handCategoryIndex}.png`);
   }
 
+  /**
+   * 原牌型值前半段是类别数字，末尾固定 10 个字符编码最佳五张牌；这里只取类别给图片索引。
+   */
   public parseLegacyHandCategory(legacyHandValue: string): number {
     const bestFiveCardSuffix = legacyHandValue.slice(-10);
     const categoryText = legacyHandValue.slice(0, legacyHandValue.length - bestFiveCardSuffix.length);
     return Number(categoryText) || 0;
   }
 
+  // ────────────────── 7. 公共牌翻牌/转牌/河牌 ──────────────────
+
+  /**
+   * 快照恢复专用：不播放动画，直接按现有公共牌重建原五张卡位；先隐藏模板子节点再填牌面。
+   */
   public renderExistingCommunityCards(communityCards: readonly number[]): void {
     const communityCardRoot = requireChild(this.node, 'poker');
     hideOriginalChildNodes(communityCardRoot);
@@ -893,6 +1024,9 @@ export class DzpkTablePresentation extends Component {
     });
   }
 
+  /**
+   * 公共牌动画分流：一次出现 3 张（正常翻牌）或快照式 5 张走初始批次；新增 1 张走转/河牌动画。
+   */
   public animateCommunityCardReveal(
     allCommunityCards: readonly number[],
     newlyRevealedCardCount: number,
@@ -908,6 +1042,9 @@ export class DzpkTablePresentation extends Component {
       : this.animateIncrementalCommunityCards(allCommunityCards, communityCardRoot);
   }
 
+  /**
+   * 初始公共牌先以牌背从发牌点飞到中央，再换成正面并展开到各自原位置；sourcePosition 只记一次。
+   */
   public async animateInitialCommunityCardBatch(
     communityCards: readonly number[],
     communityCardRoot: Node,
@@ -944,6 +1081,7 @@ export class DzpkTablePresentation extends Component {
     });
   }
 
+  /** 转牌/河牌逐张从发牌点飞到自己的原卡位，到达后换正面。 */
   public async animateIncrementalCommunityCards(
     communityCards: readonly number[],
     communityCardRoot: Node,
@@ -976,6 +1114,7 @@ export class DzpkTablePresentation extends Component {
     }
   }
 
+  /** 结算时保留最佳五张中的公共牌为白色，其余灰化；传 null 则清牌并恢复颜色。 */
   public highlightWinningCommunityCards(
     bestFiveCards: readonly number[] | null,
     communityCards: readonly number[],
@@ -995,11 +1134,17 @@ export class DzpkTablePresentation extends Component {
     });
   }
 
-  /** Serialized compatibility for older study Prefabs; current Prefab uses the semantic name. */
+  /** 旧 Prefab 拼写为 `sliderEvevt` 的序列化兼容入口；当前逻辑统一转给语义清楚的方法。 */
   public sliderEvevt(sliderEvent?: Event): void {
     this.handleRaiseSliderChanged(sliderEvent);
   }
 
+  // ────────────────── 8. 表现层内部小工具 ──────────────────
+
+  /**
+   * 从对象池取一张临时牌背，设置发牌点的缩放/旋转，Tween 到目标后调用 completed 并回收。
+   * 第二条透明 overlay 用 UIOpacity 做层次感，不创建新牌面规则。
+   */
   private launchDealOverlay(
     dealOrigin: Node,
     destinationCard: Node,
@@ -1027,6 +1172,7 @@ export class DzpkTablePresentation extends Component {
     }
   }
 
+  /** 加减按钮按一个小盲调整当前贡献，再转成 0–1 progress 复用滑杆主入口。 */
   private adjustRaiseByBlindUnits(directionMultiplier: number, smallBlindChips: number): void {
     const submitButton = requireNode('btn/jiabet/btn', this.node);
     const currentContribution = this.contributionByButtonNode.get(submitButton)
@@ -1038,31 +1184,37 @@ export class DzpkTablePresentation extends Component {
     });
   }
 
+  /** 播放名为 `animation` 的一次性 Spine，结束后隐藏节点。 */
   private playOneShotSpine(spineNode: Node): void {
     spineNode.active = true;
     playOriginalSpine(spineNode, 'animation', false, () => { spineNode.active = false; });
   }
 
+  /** 首次移动节点前冻结原 Prefab 位置；WeakMap 不修改序列化数据。 */
   private rememberSourcePosition(targetNode: Node): void {
     if (!this.sourcePositionByNode.has(targetNode)) {
       this.sourcePositionByNode.set(targetNode, targetNode.position.clone());
     }
   }
 
+  /** 读取原位置并 clone，避免 Tween 修改 WeakMap 中保存的同一个 Vec3 对象。 */
   private requireSourcePosition(targetNode: Node): Vec3 {
     const sourcePosition = this.sourcePositionByNode.get(targetNode);
     if (!sourcePosition) throw new Error(`Original position not captured for ${targetNode.name}`);
     return sourcePosition.clone();
   }
 
+  /** 把 Component.scheduleOnce 包成 Promise，让复杂动画可以用 await 按顺序书写。 */
   private delaySeconds(seconds: number): Promise<void> {
     return new Promise((resolve) => this.scheduleOnce(() => resolve(), Math.max(0, seconds)));
   }
 
+  /** 所有金额统一读取本次 GameHub 会话币种，避免某节点遗漏成固定 CNY。 */
   private currencyCode(): string {
     return requireDzpkRuntimeServices().gameContext.currency;
   }
 
+  /** 只返回桌面短金额字符串，用于与“底池/盲注”文案拼接。 */
   private formatTableAmount(
     amount: number,
     maxCharacters: number,
@@ -1075,6 +1227,7 @@ export class DzpkTablePresentation extends Component {
     });
   }
 
+  /** 所有牌桌金额 Label 的唯一写入口，统一单位、字形检查和原框内收缩。 */
   private renderAmountLabel(
     label: Label,
     amount: number,
@@ -1090,6 +1243,7 @@ export class DzpkTablePresentation extends Component {
     });
   }
 
+  /** 原桌固定六座；先校验 0–5，再按 participantSeatRoot 子节点顺序取得座位。 */
   private requireSeat(localSeatId: number): Node {
     if (!Number.isInteger(localSeatId) || localSeatId < 0 || localSeatId >= SOURCE_TABLE_SEAT_COUNT) {
       throw new Error(`DZPK local seat is outside the original six-seat table: ${localSeatId}`);
@@ -1098,11 +1252,13 @@ export class DzpkTablePresentation extends Component {
     return requireArrayItem(seatRoot.children, localSeatId, 'participant seat');
   }
 
+  /** 牌池必须在 initializeTablePresentation 建立，缺失说明生命周期顺序错误。 */
   private requireCardPool(): DzpkNodePool {
     if (!this.cardNodePool) throw new Error('DZPK card pool is not initialized');
     return this.cardNodePool;
   }
 
+  /** 筹码池必须在 initializeTablePresentation 建立。 */
   private requireChipPool(): DzpkNodePool {
     if (!this.chipNodePool) throw new Error('DZPK chip pool is not initialized');
     return this.chipNodePool;
@@ -1110,6 +1266,7 @@ export class DzpkTablePresentation extends Component {
 }
 
 function setControlTreeInteractable(rootNode: Node, interactable: boolean): void {
+  // getComponentsInChildren 会递归取整棵按钮树，保证隐藏层内的嵌套按钮/Toggle 都同步禁用。
   rootNode.getComponentsInChildren(Button).forEach((button) => {
     button.interactable = interactable;
   });
