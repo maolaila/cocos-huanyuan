@@ -11,6 +11,7 @@
    - 看原 KG 大厅提供的全局数据怎样被收进一个明确、可追踪的上下文，而不是继续依赖全局变量。
 3. `DzpkEventBus.ts`、`SourceProtocolAdapter.ts`、`GameHubAuthenticatedTransport.ts`
    - 看 `按钮意图 -> WebSocket -> 原版 Msg_* 消息 -> 本地事件` 的完整链路。
+   - `GameHubHostDocument.ts` 只处理同源承载标记、构建一致性和清除凭证后的刷新地址，不参与牌局或资金。
 4. `DzpkLoadingScreenController.ts`、`DzpkRoomSelectionController.ts`
    - 看原 Load/Room Prefab 怎样加载、显示房间、进入牌桌，以及返回/重连时为什么不能销毁 Room。
 5. `DzpkTableStateModel.ts`、`DzpkTableControllerSupport.ts`

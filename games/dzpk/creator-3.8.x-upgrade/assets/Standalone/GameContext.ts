@@ -20,6 +20,7 @@ export interface AuthenticatedGameContext {
   mode: 'TRIAL' | 'REAL';
   sessionId: string;
   sessionToken?: string;
+  cocosResource?: { assetBaseUrl?: string | null; buildId?: string | null } | null;
   walletMode?: 'SINGLE' | 'TRANSFER' | null;
   currency?: string;
   language?: string;

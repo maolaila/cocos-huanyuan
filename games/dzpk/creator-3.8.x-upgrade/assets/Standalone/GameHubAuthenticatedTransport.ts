@@ -17,6 +17,7 @@ import { DZPK_CLIENT_GAME_ID, DZPK_GAME_CODE, AuthenticatedGameContext, GameCont
 import { DzpkEventBus, EventSubscription } from './DzpkEventBus';
 import { SourceEnvelope, SourceProtocolAdapter } from './SourceProtocolAdapter';
 import { DzpkUiMessageService } from './DzpkUiMessageService';
+import { assertGameHubHostBuild, credentialFreeGameHubUrl, gameHubContextInitHeaders, gameHubHostedBackendOrigin } from './GameHubHostDocument';
 
 const DZPK_SESSION_RECONNECT_STORAGE_KEY = 'gamehub.dzpk.session-reconnect.v1';
 /** Local Creator/build default for the shared GameHub online-test backend. */
@@ -83,7 +84,8 @@ export class GameHubAuthenticatedTransport {
       || explicitSessionToken,
     );
     this.backendBaseUrl = (
-      currentUrl.searchParams.get('backendUrl')
+      gameHubHostedBackendOrigin(currentUrl, document.body)
+      ?? currentUrl.searchParams.get('backendUrl')
       ?? (!hasExplicitLaunchCredential ? storedReconnectState?.backendBaseUrl : null)
       ?? GAMEHUB_ONLINE_TEST_BACKEND_BASE_URL
     ).replace(/\/$/, '');
@@ -120,7 +122,7 @@ export class GameHubAuthenticatedTransport {
 
     const contextResponse = await window.fetch(`${this.backendBaseUrl}/gameapi/v1/context/init`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: gameHubContextInitHeaders(document.body),
       body: JSON.stringify(credentialRequest),
     });
     const contextEnvelope = await contextResponse.json() as ContextEnvelope;
@@ -131,6 +133,8 @@ export class GameHubAuthenticatedTransport {
     if (authenticatedContext.gameCode !== DZPK_GAME_CODE) {
       throw new Error('GameHub context gameCode 不是 dzpk-955');
     }
+    // 文档已选定不可变构建；发布切换与 context/init 发生竞态时拒绝混用两个版本。
+    assertGameHubHostBuild(document.body, authenticatedContext);
     this.sessionCredential = authenticatedContext.sessionToken
       ?? launchToken
       ?? launchCode
@@ -139,7 +143,8 @@ export class GameHubAuthenticatedTransport {
     this.sessionId = authenticatedContext.sessionId;
     this.gameContext.applyAuthenticatedContext(authenticatedContext);
     this.persistCurrentSessionReconnectState();
-    removeLaunchCredentialFromBrowserAddress(currentUrl);
+    const runtimeUrl = credentialFreeGameHubUrl(currentUrl, authenticatedContext, document.body);
+    window.history.replaceState(window.history.state, document.title, runtimeUrl);
     return authenticatedContext;
   }
 
@@ -390,17 +395,6 @@ function createWebsocketUrl(backendBaseUrl: string, sessionCredential: string, s
   return `${websocketOrigin}/gameapi/v1/kg-ws/?launchToken=${encodeURIComponent(sessionCredential)}`
     + `&gameCode=${encodeURIComponent(DZPK_GAME_CODE)}`
     + `&sessionId=${encodeURIComponent(sessionId)}`;
-}
-
-function removeLaunchCredentialFromBrowserAddress(currentUrl: URL): void {
-  // replaceState 不刷新页面，只替换当前历史条目的可见 URL。
-  ['launchCode', 'launchToken', 'token', 'sessionToken'].forEach((key) => {
-    currentUrl.searchParams.delete(key);
-  });
-  const credentialFreeUrl = currentUrl.pathname
-    + (currentUrl.searchParams.toString() ? `?${currentUrl.searchParams.toString()}` : '')
-    + currentUrl.hash;
-  window.history.replaceState(window.history.state, document.title, credentialFreeUrl);
 }
 
 function readSessionReconnectState(): SessionReconnectState | null {
