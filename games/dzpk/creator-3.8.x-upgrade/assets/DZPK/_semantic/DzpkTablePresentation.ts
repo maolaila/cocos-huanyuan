@@ -859,7 +859,7 @@ export class DzpkTablePresentation extends Component {
 
   /**
    * 结算摊牌：从原 win/lose/bigwin 模板克隆玩家结算卡，显示两张底牌和牌型；先做翻牌弹跳，再把
-   * 不属于最佳五张的底牌灰化。主赢家且牌型等级 > 6 时额外播放原高级牌型 Spine。
+   * 不属于最佳五张的底牌灰化。按原版规则，所有摊牌玩家的牌型等级 > 6 时播放高级牌型 Spine。
    */
   public async renderParticipantShowdown(
     localSeatId: number,
@@ -910,7 +910,7 @@ export class DzpkTablePresentation extends Component {
         && bestFiveCards.includes(participantHoleCards[holeCardIndex]);
       setOriginalNodeColor(holeCardNode, shouldHighlight ? ORIGINAL_WHITE_COLOR : ORIGINAL_ASH_COLOR);
     });
-    if (handCategoryIndex <= 6 || !isPrimaryWinner) return;
+    if (handCategoryIndex <= 6) return;
     const premiumAnimationRoot = requireChild(this.node, 'dwin1');
     hideOriginalChildNodes(premiumAnimationRoot);
     this.playOneShotSpine(requireChild(premiumAnimationRoot, String(handCategoryIndex)));
