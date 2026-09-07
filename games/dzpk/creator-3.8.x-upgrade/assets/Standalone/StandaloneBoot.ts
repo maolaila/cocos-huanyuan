@@ -21,6 +21,7 @@ import {
   Game,
   Label,
   Layers,
+  Node,
   ResolutionPolicy,
   _decorator,
   game,
@@ -37,6 +38,7 @@ import { clearDzpkRuntimeServices, installDzpkRuntimeServices } from './DzpkRunt
 import { SourceProtocolAdapter } from './SourceProtocolAdapter';
 import { DzpkUiMessageService } from './DzpkUiMessageService';
 import { DzpkViewNavigator } from './DzpkViewNavigator';
+import { DzpkViewportGuidance } from './DzpkViewportGuidance';
 
 const { ccclass, property } = _decorator;
 
@@ -47,13 +49,20 @@ export class DzpkStandaloneBoot extends Component {
   @property(Label)
   public messageLabel: Label | null = null;
 
+  // 独立的旋转指引节点；不能绑定到 messageLabel，否则短提示计时器会把横屏指引隐藏。
+  @property(Node)
+  public portraitGuidance: Node | null = null;
+
   private audioService: DzpkAudioService | null = null;
   private uiMessageService: DzpkUiMessageService | null = null;
   private authenticatedTransport: GameHubAuthenticatedTransport | null = null;
+  private viewportGuidance: DzpkViewportGuidance | null = null;
 
   /** Scene 加载即完成画布配置、前后台监听和异步启动。 */
   protected onLoad(): void {
     this.configureOriginalLandscapeCanvas();
+    if (!this.portraitGuidance) throw new Error('Boot scene is missing portrait guidance');
+    this.viewportGuidance = new DzpkViewportGuidance(this.node, this.portraitGuidance);
     game.on(Game.EVENT_HIDE, this.handleApplicationEnteredBackground, this);
     game.on(Game.EVENT_SHOW, this.handleApplicationReturnedToForeground, this);
     void this.initializeStandaloneGameContext();
@@ -65,6 +74,7 @@ export class DzpkStandaloneBoot extends Component {
   protected onDestroy(): void {
     game.off(Game.EVENT_HIDE, this.handleApplicationEnteredBackground, this);
     game.off(Game.EVENT_SHOW, this.handleApplicationReturnedToForeground, this);
+    this.viewportGuidance?.dispose();
     this.authenticatedTransport?.closeAuthenticatedConnection();
     clearDzpkRuntimeServices();
   }
@@ -159,6 +169,7 @@ export class DzpkStandaloneBoot extends Component {
 
   /** 回到前台时恢复音频，并在连接已断的情况下走带 Room 快照恢复的重连。 */
   private readonly handleApplicationReturnedToForeground = (): void => {
+    this.viewportGuidance?.refresh();
     this.audioService?.resumeAfterForeground();
     this.authenticatedTransport?.restoreAuthenticatedConnection().catch((reconnectError) => {
       this.uiMessageService?.showTransientMessage(normalizeErrorMessage(reconnectError));

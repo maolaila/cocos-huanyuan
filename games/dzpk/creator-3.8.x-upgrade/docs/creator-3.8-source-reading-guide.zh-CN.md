@@ -7,6 +7,7 @@
 
 1. `assets/Standalone/StandaloneBoot.ts`
    - 看 Cocos 组件怎样从 Scene 启动，怎样处理横屏、前后台切换，以及怎样组装整个运行环境。
+   - `DzpkViewportGuidance.ts` 只在竖屏显示独立 Cocos 指引并拦截误触，旋转回来继续同一会话，不改牌桌布局或金额。
 2. `assets/Standalone/GameContext.ts`、`DzpkRuntimeServices.ts`
    - 看原 KG 大厅提供的全局数据怎样被收进一个明确、可追踪的上下文，而不是继续依赖全局变量。
 3. `DzpkEventBus.ts`、`SourceProtocolAdapter.ts`、`GameHubAuthenticatedTransport.ts`
