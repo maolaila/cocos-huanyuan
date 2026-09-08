@@ -6,14 +6,27 @@ class Events {
   on(type: string, callback: (...args: any[]) => void, target?: unknown, capture?: boolean): void {
     this.listeners.push({ type, callback, target, capture });
   }
-  off(type: string, callback: (...args: any[]) => void, target?: unknown, capture?: boolean): void {
-    this.listeners = this.listeners.filter((item) => item.type !== type || item.callback !== callback || item.target !== target || item.capture !== capture);
+  off(type: string, callback?: (...args: any[]) => void, target?: unknown, capture?: boolean): void {
+    this.listeners = this.listeners.filter((item) => item.type !== type || (callback !== undefined &&
+      (item.callback !== callback || item.target !== target || item.capture !== capture)));
   }
   emit(type: string, value?: unknown): void {
     this.listeners.filter((item) => item.type === type).forEach((item) => item.callback.call(item.target, value));
   }
   addEventListener(type: string, callback: (...args: any[]) => void): void { this.on(type, callback); }
   removeEventListener(type: string, callback: (...args: any[]) => void): void { this.off(type, callback); }
+}
+
+class TestVec3 {
+  constructor(public x = 0, public y = 0, public z = 0) {}
+  clone() { return new TestVec3(this.x, this.y, this.z); }
+}
+class TestColor {
+  r: number; g: number; b: number; a: number;
+  constructor(r: number | TestColor = 255, g = 255, b = 255, a = 255) {
+    if (typeof r === 'object') Object.assign(this, r);
+    else Object.assign(this, { r, g, b, a });
+  }
 }
 
 class TestNode extends Events {
@@ -23,28 +36,66 @@ class TestNode extends Events {
   };
   active = false;
   valid = true;
+  parent: TestNode | null = null;
+  children: TestNode[] = [];
+  position = new TestVec3();
+  components = new Map<any, any>();
+  constructor(public name = '') { super(); }
+  getChildByName(name: string) { return this.children.find((child) => child.name === name) ?? null; }
+  add(name: string) { const child = new TestNode(name); child.parent = this; child.active = true; this.children.push(child); return child; }
+  setPosition(x: number, y: number, z: number) { this.position = new TestVec3(x, y, z); }
+  getComponent(type: any) { return this.components.get(type) ?? null; }
+  addComponent(type: any) { const component = new type(); component.node = this; this.components.set(type, component); return component; }
+  getComponentsInChildren(type: any): any[] {
+    return [this.getComponent(type), ...this.children.flatMap((child) => child.getComponentsInChildren(type))].filter(Boolean);
+  }
+  click() { if (this.getComponent(TestButton)?.interactable && this.active) this.emit('click', { target: this }); }
 }
+class TestComponent { node = new TestNode(); }
+class TestButton extends TestComponent { static EventType = { CLICK: 'click' }; interactable = true; }
+class TestToggle extends TestComponent { interactable = true; isChecked = false; }
+class TestSlider extends TestComponent { progress = 0; }
+class TestProgressBar extends TestComponent { progress = 0; }
+class TestSkeleton extends TestComponent { setCompleteListener(_callback: unknown) {} setAnimation(..._args: unknown[]) {} }
 class TestLabel {
   static Overflow = { SHRINK: 2 };
   node = new TestNode();
   string = '';
-  font = null;
+  font: unknown = null;
   fontFamily = 'Arial';
   fontSize = 44;
   lineHeight = 56;
   overflow = 0;
   enableWrapText = true;
+  isBold = false;
+  isItalic = false;
+  enableOutline = false;
+  outlineWidth = 1;
+  outlineColor = new TestColor(11, 22, 33, 255);
+  color = new TestColor(240, 240, 240, 255);
 }
 const view = new Events();
 const engineScreen = { windowSize: { width: 390, height: 219 } };
 mock.module('cc', () => ({
-  Node: TestNode, Label: TestLabel, Event: class {}, Color: class { constructor(..._args: unknown[]) {} },
-  Sprite: class {}, SpriteAtlas: class {}, UIOpacity: class {}, Vec3: class {},
-  assetManager: {}, sp: {}, view, screen: engineScreen,
+  Node: TestNode, Label: TestLabel, Event: class {}, Color: TestColor, Component: TestComponent,
+  Button: TestButton, Toggle: TestToggle, Slider: TestSlider, ProgressBar: TestProgressBar,
+  Sprite: class {}, SpriteAtlas: class {}, UIOpacity: class {}, Vec3: TestVec3, Animation: class {}, Tween: class {},
+  NodePool: class {},
+  instantiate: () => { throw new Error('Prefab instantiation is outside this focused test'); },
+  tween: () => { throw new Error('Animation is outside this focused test'); },
+  find: (path: string, root: TestNode) => path.split('/').reduce((node, name) => node?.getChildByName(name), root),
+  _decorator: { ccclass: () => (value: unknown) => value, property: () => () => undefined },
+  assetManager: {}, sp: { Skeleton: TestSkeleton }, view, screen: engineScreen,
   isValid: (value: { valid?: boolean } | undefined) => !!value && value.valid !== false,
 }));
 const { DzpkViewportGuidance } = await import('../creator-3.8.x-upgrade/assets/Standalone/DzpkViewportGuidance');
 const { DzpkUiMessageService } = await import('../creator-3.8.x-upgrade/assets/Standalone/DzpkUiMessageService');
+const { applyDzpkAmountLabel, restoreDzpkAmountLabel, DZPK_ROOM_SYSTEM_FONT_STYLE } = await import('../creator-3.8.x-upgrade/assets/Standalone/DzpkUiHelpers');
+const { installDzpkRuntimeServices, clearDzpkRuntimeServices } = await import('../creator-3.8.x-upgrade/assets/Standalone/DzpkRuntimeServices');
+const { DzpkTablePresentation } = await import('../creator-3.8.x-upgrade/assets/DZPK/_semantic/DzpkTablePresentation');
+const { DzpkTableGameController } = await import('../creator-3.8.x-upgrade/assets/DZPK/_semantic/DzpkTableGameController');
+const { DzpkRoomSelectionController } = await import('../creator-3.8.x-upgrade/assets/DZPK/_semantic/DzpkRoomSelectionController');
+const { DzpkTableStateModel, DzpkParticipantState } = await import('../creator-3.8.x-upgrade/assets/DZPK/_semantic/DzpkTableStateModel');
 const originalWindow = Object.getOwnPropertyDescriptor(globalThis, 'window');
 const disposables: Array<{ dispose(): void }> = [];
 afterEach(() => {
@@ -52,7 +103,136 @@ afterEach(() => {
   if (originalWindow) Object.defineProperty(globalThis, 'window', originalWindow);
   else Reflect.deleteProperty(globalThis, 'window');
   mock.restore();
+  clearDzpkRuntimeServices();
 });
+
+describe('Room fallback style and raise panel regression', () => {
+  test('Room fallback uses font-size line height and restores the original CNY line height and style', () => {
+    const label = new TestLabel();
+    const originalFont = { name: 'room_xz.fnt' };
+    label.font = originalFont;
+    label.fontSize = 30; label.lineHeight = 40; label.node.position.y = 39.634;
+    const initial = { color: { ...label.color }, outline: { ...label.outlineColor } };
+    const options = { maxCharacters: 5, sourceTenThousandDecimals: 0, sourceHundredMillionDecimals: 0,
+      bitmapFontProfile: 'CNY_INTEGER_UNITS' as const,
+      roomSystemFontStyle: DZPK_ROOM_SYSTEM_FONT_STYLE.limit };
+    for (let repeat = 0; repeat < 3; repeat++) {
+      expect(applyDzpkAmountLabel(label as never, 500000, 'USD', options)).toBe('500K');
+      expect(label.fontSize).toBe(30); expect(label.lineHeight).toBe(30);
+      expect(label.isItalic).toBe(true); expect(label.isBold).toBe(false); expect(label.enableOutline).toBe(true);
+      expect(label.outlineColor).toMatchObject({ r: 35, g: 31, b: 23 });
+      expect(label.node.position.y).toBe(39.634);
+    }
+    expect(applyDzpkAmountLabel(label as never, 500000, 'VND', options)).toBe('500N');
+    expect(label.string.length).toBeLessThanOrEqual(5);
+    expect(applyDzpkAmountLabel(label as never, 500000, 'CNY', options)).toBe('50万');
+    expect(label.font).toBe(originalFont); expect(label.isItalic).toBe(false); expect(label.isBold).toBe(false);
+    expect(label.lineHeight).toBe(40);
+    expect(label.enableOutline).toBe(false); expect(label.outlineColor).toEqual(initial.outline);
+    expect(label.color).toEqual(initial.color); expect(label.node.position.y).toBe(39.634);
+  });
+
+  test('Room restores original maximum-carry CNY art text/font/style/Y after USD and VND', () => {
+    const room = new TestNode('rooms');
+    const card = room.add('1');
+    const label = card.add('3').addComponent(TestLabel) as TestLabel;
+    const originalFont = { name: '3.fnt' };
+    label.font = originalFont; label.string = '1bw'; label.fontSize = 50; label.lineHeight = 40;
+    label.node.position.y = 10.396;
+    const gameContext = { currency: 'USD', roomConfig: { '2': { level: 2, min_gold: 200000, max_gold: 1000000, doublescore: 1000 } } };
+    installDzpkRuntimeServices({ gameContext } as never);
+    const controller = new DzpkRoomSelectionController();
+    controller.roomChoiceContainer = room as never;
+    const render = () => (controller as unknown as { renderRoomConfigurationLabels(): void }).renderRoomConfigurationLabels();
+    render(); render();
+    expect(label.string).toBe('1M'); expect(label.fontSize).toBe(50); expect(label.lineHeight).toBe(50);
+    expect(label.isBold).toBe(true); expect(label.isItalic).toBe(true); expect(label.enableOutline).toBe(true);
+    expect(label.outlineColor).toMatchObject({ r: 91, g: 49, b: 17 }); expect(label.node.position.y).toBe(10.396);
+    gameContext.currency = 'VND'; render();
+    expect(label.string).toBe('1Tr'); expect(label.string.length).toBeLessThanOrEqual(5); expect(label.node.position.y).toBe(10.396);
+    gameContext.currency = 'CNY'; render();
+    expect(label.string).toBe('1bw'); expect(label.font).toBe(originalFont); expect(label.node.position.y).toBe(10.396);
+    expect(label.fontSize).toBe(50); expect(label.lineHeight).toBe(40); expect(label.isBold).toBe(false); expect(label.isItalic).toBe(false);
+    expect(label.enableOutline).toBe(false);
+    restoreDzpkAmountLabel(label as never);
+    expect(label.string).toBe('1bw');
+  });
+
+  test('opening a previously disabled raise tree restores submit/add/sub but retains the preset stack filter', () => {
+    const fixture = raiseFixture();
+    fixture.presentation.showPlayerActionControls('bet', 200000, fixture.model);
+    expect(fixture.submit.getComponent(TestButton).interactable).toBe(false);
+    fixture.open();
+    for (const node of [fixture.submit, fixture.add, fixture.sub]) expect(node.getComponent(TestButton).interactable).toBe(true);
+    const belowMinimum = fixture.raise.getChildByName('0')!;
+    expect(belowMinimum.getComponent(TestButton).interactable).toBe(false);
+    expect(fixture.raise.getChildByName('1')!.getComponent(TestButton).interactable).toBe(true);
+    expect(fixture.raise.getChildByName('4')!.getComponent(TestButton).interactable).toBe(false);
+    belowMinimum.click();
+    expect(fixture.sent).toEqual([]);
+    for (let repeat = 0; repeat < 3; repeat++) {
+      fixture.presentation.setRaiseSelectionVisible(false, [], 0, 0);
+      expect(fixture.submit.getComponent(TestButton).interactable).toBe(false);
+      fixture.open();
+    }
+    expect(fixture.add.listeners.filter(({ type }) => type === 'click')).toHaveLength(1);
+    expect(fixture.sub.listeners.filter(({ type }) => type === 'click')).toHaveLength(1);
+    fixture.add.click();
+    expect(fixture.presentation.readContributionFromButtonTarget(fixture.submit)).toBe(400000);
+    fixture.sub.click();
+    expect(fixture.presentation.readContributionFromButtonTarget(fixture.submit)).toBe(300000);
+    fixture.presentation.handleRaiseSliderChanged({ progress: 0.98 });
+    expect(fixture.presentation.readContributionFromButtonTarget(fixture.submit)).toBe(9800000);
+    fixture.submit.click(); fixture.submit.click();
+    expect(fixture.sent).toEqual([{ event: 'Msg_DZPK_ActBet', data: { gold: 9800000 } }]);
+  });
+
+  test('a short stack can still submit its legal all-in while smaller fixed presets remain disabled', () => {
+    const fixture = raiseFixture();
+    fixture.model.viewerParticipant!.stackChips = 200000;
+    fixture.presentation.setRaiseSelectionVisible(true, [100000, 200000, 400000, 800000, 12000000, 300000], 200000, 100000);
+    expect(fixture.raise.getChildByName('0')!.getComponent(TestButton).interactable).toBe(false);
+    expect(fixture.submit.getComponent(TestButton).interactable).toBe(true);
+    expect(fixture.presentation.readContributionFromButtonTarget(fixture.submit)).toBe(200000);
+    fixture.submit.click();
+    expect(fixture.sent).toEqual([{ event: 'Msg_DZPK_ActBet', data: { gold: 200000 } }]);
+  });
+});
+
+function raiseFixture() {
+  const root = new TestNode('table'); root.active = true;
+  const controls = root.add('btn');
+  const bet = controls.add('bet');
+  for (const group of ['dm', 'dichi']) for (let index = 0, node = bet.add(group); index < 3; index++) node.add(String(index)).addComponent(TestButton);
+  for (const name of ['btn_yellow', 'btn_rang', 'btn_green']) bet.add(name).addComponent(TestButton);
+  bet.getChildByName('btn_green')!.add('layout').add('label').addComponent(TestLabel);
+  const raise = controls.add('jiabet');
+  for (let index = 0; index < 5; index++) { const node = raise.add(String(index)); node.addComponent(TestButton); node.add('label').addComponent(TestLabel); }
+  const submit = raise.add('btn'); submit.addComponent(TestButton);
+  const sliderRoot = raise.add('slider'); const slider = sliderRoot.add('slider');
+  slider.addComponent(TestSlider); slider.addComponent(TestProgressBar);
+  const handle = slider.add('Handle'); handle.add('label').addComponent(TestLabel);
+  const add = handle.add('btn_add'); add.addComponent(TestButton); const sub = handle.add('btn_sub'); sub.addComponent(TestButton);
+  const spine = slider.add('spine'); spine.active = false; spine.addComponent(TestSkeleton);
+  const layout = slider.add('bar').add('layout');
+  for (let index = 0; index < 31; index++) layout.add(String(index));
+  layout.add('anim');
+  const presentation = new DzpkTablePresentation(); presentation.node = root as never;
+  const model = new DzpkTableStateModel();
+  model.viewerParticipant = new DzpkParticipantState({ uid: 7001, gold: 10000000, join: true });
+  model.currentActionNotice = { uid: 7001, minbet: 200000 };
+  model.smallBlindChips = 100000;
+  const controller = new DzpkTableGameController(); controller.node = root as never;
+  Reflect.set(controller, 'tablePresentation', presentation); Reflect.set(controller, 'tableStateModel', model);
+  const sent: Array<{ event: string; data: unknown }> = [];
+  installDzpkRuntimeServices({ gameContext: { currency: 'USD' }, audioService: { playButtonSound() {} },
+    authenticatedTransport: { sendSourceEvent(event: string, data: unknown) { sent.push({ event, data }); } } } as never);
+  submit.on('click', (event) => controller.submitRaiseSelectionFromButton(event as never));
+  for (let index = 0; index < 5; index++) raise.getChildByName(String(index))!.on('click',
+    (event) => controller.submitRaiseSelectionFromButton(event as never));
+  return { presentation, model, raise, submit, add, sub, sent,
+    open: () => presentation.setRaiseSelectionVisible(true, [200000, 400000, 800000, 1000000, 12000000, 300000], 10000000, 100000) };
+}
 
 const assetPath = new URL('../creator-3.8.x-upgrade/assets/', import.meta.url);
 const scene = JSON.parse(readFileSync(new URL('Scene/DzpkStandaloneBoot.scene', assetPath), 'utf8'));

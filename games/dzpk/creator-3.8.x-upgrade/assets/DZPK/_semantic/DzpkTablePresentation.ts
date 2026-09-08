@@ -554,11 +554,14 @@ export class DzpkTablePresentation extends Component {
     const actionControlRoot = requireChild(this.node, 'btn');
     const raiseSelectionRoot = requireChild(actionControlRoot, 'jiabet');
     raiseSelectionRoot.active = shouldShowRaiseSelection;
+    // 上一轮隐藏操作层时整树都已禁用；恢复提交/加/减按钮后，再由下方逐个过滤不合法预设。
+    setControlTreeInteractable(raiseSelectionRoot, shouldShowRaiseSelection);
     requireChild(actionControlRoot, 'bet').active = shouldShowRaiseSelection
       ? false
       : shouldRestoreBettingControls;
     if (!shouldShowRaiseSelection) return;
 
+    this.minimumRaiseContributionChips = Math.min(raisePresetContributions[5] ?? 0, viewerStackChips);
     for (let presetIndex = 0; presetIndex < 5; presetIndex += 1) {
       const presetButtonNode = requireChild(raiseSelectionRoot, String(presetIndex));
       const presetContribution = raisePresetContributions[presetIndex] ?? 0;
@@ -568,11 +571,11 @@ export class DzpkTablePresentation extends Component {
         5,
         2,
       );
-      requireComponent(presetButtonNode, Button).interactable = presetContribution <= viewerStackChips;
+      requireComponent(presetButtonNode, Button).interactable =
+        presetContribution >= this.minimumRaiseContributionChips && presetContribution <= viewerStackChips;
       this.contributionByButtonNode.set(presetButtonNode, presetContribution);
     }
     const submitRaiseButton = requireChild(raiseSelectionRoot, 'btn');
-    this.minimumRaiseContributionChips = raisePresetContributions[5] ?? 0;
     this.contributionByButtonNode.set(submitRaiseButton, this.minimumRaiseContributionChips);
 
     const addBlindButton = requireNode('slider/slider/Handle/btn_add', raiseSelectionRoot);

@@ -37,6 +37,12 @@ export type DzpkBitmapFontProfile =
   | 'CNY_DECIMAL_UNITS'
   | 'NONE';
 
+export const DZPK_ROOM_SYSTEM_FONT_STYLE = {
+  limit: 'ROOM_LIMIT',
+  maximumCarry: 'ROOM_MAXIMUM_CARRY',
+} as const;
+type DzpkRoomSystemFontStyle = typeof DZPK_ROOM_SYSTEM_FONT_STYLE[keyof typeof DZPK_ROOM_SYSTEM_FONT_STYLE];
+
 export interface DzpkAmountFormatOptions {
   maxCharacters?: number;
   sourceTenThousandDecimals?: number;
@@ -51,6 +57,8 @@ export interface DzpkAmountLabelOptions extends DzpkAmountFormatOptions {
   suffix?: string;
   shrinkToFit?: boolean;
   systemFontScale?: number;
+  /** 仅 Room 缺字回退：保留声明字号，单行行高取字号；CNY BMFont 恢复原行高。 */
+  roomSystemFontStyle?: DzpkRoomSystemFontStyle;
 }
 
 interface OriginalLabelState {
@@ -60,6 +68,17 @@ interface OriginalLabelState {
   lineHeight: number;
   overflow: Label['overflow'];
   enableWrapText: boolean;
+  text: string;
+}
+
+interface OriginalRoomLabelStyle {
+  bold: boolean;
+  italic: boolean;
+  outline: boolean;
+  outlineColor: Color;
+  outlineWidth: number;
+  color: Color;
+  y: number;
 }
 
 interface CompactUnit {
@@ -68,6 +87,7 @@ interface CompactUnit {
 }
 
 const originalLabelStateByLabel = new WeakMap<Label, OriginalLabelState>();
+const originalRoomLabelStyleByLabel = new WeakMap<Label, OriginalRoomLabelStyle>();
 // 单位从大到小排列，格式化时选择第一个不大于金额的单位。
 const CNY_COMPACT_UNITS: readonly CompactUnit[] = [
   { scale: 1_000_000_000_000, suffix: '万亿' },
@@ -230,16 +250,21 @@ export function applyDzpkAmountLabel(
   const originalState = rememberOriginalLabelState(label);
   const needsSystemFont = Boolean(originalState.font)
     && !bitmapFontSupports(displayText, options.bitmapFontProfile ?? 'NONE');
+  if (options.roomSystemFontStyle) rememberRoomLabelStyle(label);
+  restoreRoomLabelStyle(label);
 
   if (needsSystemFont) {
     label.font = null;
     label.fontFamily = 'Arial';
-    const systemFontScale = Math.max(0.5, Math.min(1, options.systemFontScale ?? 0.9));
+    const systemFontScale = options.roomSystemFontStyle ? 1 : Math.max(0.5, Math.min(1, options.systemFontScale ?? 0.9));
     label.fontSize = Math.max(12, originalState.fontSize * systemFontScale);
-    label.lineHeight = Math.max(label.fontSize, originalState.lineHeight * systemFontScale);
+    // TTF 单行行高跟随字号，在原 UITransform 内由 SHRINK 处理；不改节点位置或原 BMFont 行高。
+    label.lineHeight = options.roomSystemFontStyle
+      ? label.fontSize : Math.max(label.fontSize, originalState.lineHeight * systemFontScale);
+    if (options.roomSystemFontStyle) applyRoomSystemFontStyle(label, options.roomSystemFontStyle);
   } else {
     label.font = originalState.font;
-    if (!originalState.font) label.fontFamily = originalState.fontFamily;
+    if (!originalState.font || originalRoomLabelStyleByLabel.has(label)) label.fontFamily = originalState.fontFamily;
     label.fontSize = originalState.fontSize;
     label.lineHeight = originalState.lineHeight;
   }
@@ -251,6 +276,50 @@ export function applyDzpkAmountLabel(
   }
   label.string = displayText;
   return displayText;
+}
+
+/** 恢复原 CNY 美术字（含 1bw/5bw）及字体、样式、Y；只在原值仍适用时由 Room 调用。 */
+export function restoreDzpkAmountLabel(label: Label): void {
+  const state = originalLabelStateByLabel.get(label);
+  if (!state) return;
+  label.font = state.font;
+  label.fontFamily = state.fontFamily;
+  label.fontSize = state.fontSize;
+  label.lineHeight = state.lineHeight;
+  label.overflow = state.overflow;
+  label.enableWrapText = state.enableWrapText;
+  label.string = state.text;
+  restoreRoomLabelStyle(label);
+}
+
+/** Label 的粗体/斜体/描边是系统字体属性；BMFont 的这些效果已烘焙在原 PNG，不给它重复加效果。 */
+function applyRoomSystemFontStyle(label: Label, style: DzpkRoomSystemFontStyle): void {
+  const maximumCarry = style === DZPK_ROOM_SYSTEM_FONT_STYLE.maximumCarry;
+  label.isBold = maximumCarry;
+  label.isItalic = true;
+  label.color = new Color(255, 255, 255, 255);
+  label.enableOutline = true;
+  label.outlineColor = maximumCarry ? new Color(91, 49, 17, 255) : new Color(35, 31, 23, 255);
+  label.outlineWidth = maximumCarry ? 4 : 2;
+}
+
+function rememberRoomLabelStyle(label: Label): void {
+  if (originalRoomLabelStyleByLabel.has(label)) return;
+  originalRoomLabelStyleByLabel.set(label, { bold: label.isBold, italic: label.isItalic,
+    outline: label.enableOutline, outlineColor: new Color(label.outlineColor), outlineWidth: label.outlineWidth,
+    color: new Color(label.color), y: label.node.position.y });
+}
+
+function restoreRoomLabelStyle(label: Label): void {
+  const state = originalRoomLabelStyleByLabel.get(label);
+  if (!state) return;
+  label.isBold = state.bold;
+  label.isItalic = state.italic;
+  label.enableOutline = state.outline;
+  label.outlineColor = new Color(state.outlineColor);
+  label.outlineWidth = state.outlineWidth;
+  label.color = new Color(state.color);
+  label.node.setPosition(label.node.position.x, state.y, label.node.position.z);
 }
 
 export function constrainSingleLineLabel(label: Label): void {
@@ -364,6 +433,7 @@ function rememberOriginalLabelState(label: Label): OriginalLabelState {
     lineHeight: label.lineHeight,
     overflow: label.overflow,
     enableWrapText: label.enableWrapText,
+    text: label.string,
   };
   originalLabelStateByLabel.set(label, originalState);
   return originalState;

@@ -28,6 +28,8 @@ import { requireDzpkRuntimeServices } from '../../Standalone/DzpkRuntimeServices
 import { SourceEnvelope } from '../../Standalone/SourceProtocolAdapter';
 import {
   applyDzpkAmountLabel,
+  DZPK_ROOM_SYSTEM_FONT_STYLE,
+  restoreDzpkAmountLabel,
   applyNodeOpacity,
   constrainSingleLineLabel,
   fitSourceDisplayName,
@@ -204,7 +206,7 @@ export class DzpkRoomSelectionController extends Component {
           sourceTenThousandDecimals: 0,
           sourceHundredMillionDecimals: 0,
           bitmapFontProfile: 'CNY_INTEGER_UNITS',
-          systemFontScale: 0.88,
+          roomSystemFontStyle: DZPK_ROOM_SYSTEM_FONT_STYLE.limit,
         });
       }
 
@@ -215,6 +217,7 @@ export class DzpkRoomSelectionController extends Component {
         configuration.level,
         Number(configuration.max_gold),
       )) {
+        restoreDzpkAmountLabel(maximumCarryLabel);
         return;
       }
       applyDzpkAmountLabel(maximumCarryLabel, configuration.max_gold, gameContext.currency, {
@@ -222,7 +225,7 @@ export class DzpkRoomSelectionController extends Component {
         sourceTenThousandDecimals: 0,
         sourceHundredMillionDecimals: 0,
         bitmapFontProfile: 'NONE',
-        systemFontScale: 0.76,
+        roomSystemFontStyle: DZPK_ROOM_SYSTEM_FONT_STYLE.maximumCarry,
       });
     });
   }
@@ -245,7 +248,7 @@ export class DzpkRoomSelectionController extends Component {
         sourceTenThousandDecimals: 0,
         sourceHundredMillionDecimals: 0,
         bitmapFontProfile: 'CNY_INTEGER_UNITS',
-        systemFontScale: 0.88,
+        roomSystemFontStyle: DZPK_ROOM_SYSTEM_FONT_STYLE.limit,
       },
     );
   }
