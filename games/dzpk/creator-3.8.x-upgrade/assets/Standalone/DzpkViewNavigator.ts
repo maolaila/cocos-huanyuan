@@ -12,6 +12,7 @@ import { GameContext } from './GameContext';
 import { GameHubAuthenticatedTransport } from './GameHubAuthenticatedTransport';
 import { DzpkResourceLoader } from './DzpkResourceLoader';
 import { DzpkUiMessageService } from './DzpkUiMessageService';
+import { finishDzpkBrowserExit } from './DzpkBrowserExit';
 
 export interface PopupRequest {
   path: 'prefab/Rule' | 'prefab/Set';
@@ -23,6 +24,7 @@ export class DzpkViewNavigator {
   private readonly gameRootNode: Node;
   private readonly popupRootNode: Node;
   private authenticatedTransport: GameHubAuthenticatedTransport | null = null;
+  private exitPromise: Promise<boolean> | null = null;
 
   /** 从 Boot Canvas 取得三个固定容器；缺任何一个都说明 Scene 结构不完整。 */
   public constructor(
@@ -94,17 +96,30 @@ export class DzpkViewNavigator {
   }
 
   /**
-   * Room 再点返回才是退出整个游戏。iframe 中通过 postMessage 通知可信父页面；独立标签页中只结束
-   * 会话并提示用户关闭，避免脚本调用浏览器不允许的 `window.close()`。
+   * Room 返回先等待服务端退出确认，然后关闭当前 TAB 或通知 iframe 宿主。
+   * 加载失败等自动退出仍保留提示页；只有用户点击后退传 closePage，不因加载超时静默关页。
    */
-  public requestStandaloneExit(): void {
-    this.authenticatedTransport?.endAuthenticatedSession();
-    const targetOrigin = this.gameContext.postMessageTargetOrigin;
-    if (window.parent !== window && targetOrigin) {
-      window.parent.postMessage({ type: 'GAMEHUB_GAME_EXIT', gameCode: 'dzpk-955' }, targetOrigin);
-      return;
+  public requestStandaloneExit(options: { closePage?: boolean } = {}): Promise<boolean> {
+    if (!this.exitPromise) {
+      this.exitPromise = this.finishStandaloneExit(options.closePage === true).then((exited) => {
+        if (!exited) this.exitPromise = null;
+        return exited;
+      });
     }
-    this.uiMessageService.showTips('已退出德州扑克，可关闭当前页面');
+    return this.exitPromise;
+  }
+
+  private async finishStandaloneExit(closePage: boolean): Promise<boolean> {
+    try {
+      if (!this.authenticatedTransport) throw new Error('Authenticated transport is missing');
+      const sessionId = await this.authenticatedTransport.endAuthenticatedSession();
+      finishDzpkBrowserExit({ sessionId, parentOrigin: this.gameContext.postMessageTargetOrigin,
+        closePage, showMessage: (message) => this.uiMessageService.showTips(message) });
+      return true;
+    } catch {
+      this.uiMessageService.showTips('暂时无法退出，请重试');
+      return false;
+    }
   }
 }
 

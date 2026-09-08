@@ -317,7 +317,7 @@ export class DzpkRoomSelectionController extends Component {
   public requestOriginalRoomEntry(selectedRoomLevel: number): void {
     const { authenticatedTransport, eventBus, gameContext, uiMessageService } =
       requireDzpkRuntimeServices();
-    if (this.roomEntryPending) return;
+    if (this.roomEntryPending || this.exitRequested) return;
     gameContext.roomLevel = selectedRoomLevel;
     const selectedRoomConfiguration = gameContext.roomConfig[
       String(selectedRoomLevel)
@@ -391,7 +391,9 @@ export class DzpkRoomSelectionController extends Component {
       case 'exit':
         this.exitRequested = true;
         audioService.playCloseSound();
-        viewNavigator.requestStandaloneExit();
+        void viewNavigator.requestStandaloneExit({ closePage: true }).then((exited) => {
+          if (!exited) this.exitRequested = false;
+        });
         return;
       case 'rule':
         void viewNavigator.displayOriginalPopupPrefab({ path: ORIGINAL_RULE_PREFAB_PATH });

@@ -1,6 +1,6 @@
 /**
  * 学习导读：这是 Creator 3.8.8 Scene 的总入口组件。它不绘制牌桌，而是完成四件事：
- * 1. 把画布和相机固定为原版 1334×750 横屏；
+ * 1. 保留原版 1334×750 设计，交 viewport 服务按横屏比例铺满视口并管理全屏手势；
  * 2. 创建上下文、事件、资源、音频、协议、网络、导航等服务；
  * 3. 按“认证 -> WebSocket -> DZPK Bundle -> 原 Load Prefab”的顺序启动；
  * 4. 在应用前后台切换时暂停声音并恢复连接。
@@ -10,7 +10,7 @@
  * - `_decorator.ccclass/property`：注册脚本组件和 Inspector 序列化字段。
  * - `Camera`：把 3D 世界投影到屏幕；2D UI 必须用 ORTHO 正交投影，否则可能“看得见但点不到”。
  * - `Layers`：相机可见层位掩码；这里让 DEFAULT、IGNORE_RAYCAST、UI_2D 都能被启动相机看到。
- * - `view/ResolutionPolicy`：设置设计稿分辨率和适配策略；SHOW_ALL 保证完整画面可见。
+ * - `view/ResolutionPolicy`：先设置原设计，随后 viewport 服务用 FIXED_HEIGHT/FIXED_WIDTH 等比扩展横屏可见区。
  * - `game.on/off`：监听整个应用隐藏/显示，不是某个 Node 的点击事件。
  * - `macro.ENABLE_MULTI_TOUCH`：关闭多点触控，避免牌桌按钮同时触发多次。
  * - `profiler.hideStats()`：隐藏 FPS/DrawCall 调试浮层，不影响渲染本身。

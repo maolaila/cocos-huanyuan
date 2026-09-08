@@ -53,6 +53,7 @@ export class GameHubAuthenticatedTransport {
   private reconnectAttemptCount = 0;
   private reconnectRoomId: string | number | null = null;
   private reconnectRoomLevel: number | null = null;
+  private endingSession: Promise<string> | null = null;
 
   // ────────────────── 1. 启动认证与首次连接 ──────────────────
 
@@ -301,10 +302,44 @@ export class GameHubAuthenticatedTransport {
     socket?.close();
   }
 
-  /** 在关闭网络之外删除本标签重连凭据，因此之后刷新不能再回到这局。 */
-  public endAuthenticatedSession(): void {
+  /** 先由服务端确认退出，再关闭连接和清缓存；并发点击复用同一请求，失败允许重试。 */
+  public endAuthenticatedSession(): Promise<string> {
+    if (!this.endingSession) {
+      this.endingSession = this.submitSessionExit().catch((error: unknown) => {
+        this.endingSession = null;
+        throw error;
+      });
+    }
+    return this.endingSession;
+  }
+
+  /** 返回已退出的 sessionId，供宿主校验关闭消息；keepalive 不替代响应确认。 */
+  private async submitSessionExit(): Promise<string> {
+    const sessionId = this.sessionId;
+    const credential = this.sessionCredential;
+    const backendOrigin = this.backendBaseUrl;
+    if (!sessionId || !credential || !backendOrigin) throw new Error('Authenticated session is required before exit');
+    {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10_000);
+      try {
+        const response = await window.fetch(`${backendOrigin}/gameapi/v1/sessions/exit`, {
+          method: 'POST', keepalive: true, signal: controller.signal,
+          headers: { ...gameHubContextInitHeaders(document.body), 'x-launch-token': credential },
+          body: JSON.stringify({ sessionId, launchToken: credential, reason: 'user_exit' }),
+        });
+        const result = await response.json() as { code?: number; data?: { sessionId?: string; status?: string } };
+        if (!response.ok || result.code !== 0 || result.data?.sessionId !== sessionId || result.data?.status !== 'EXITING') {
+          throw new Error('GameHub session exit was not acknowledged');
+        }
+      } finally { clearTimeout(timeout); }
+    }
+    if (this.sessionId !== sessionId || this.sessionCredential !== credential || this.backendBaseUrl !== backendOrigin) {
+      throw new Error('Authenticated session changed while exiting');
+    }
     this.closeAuthenticatedConnection();
     clearSessionReconnectState();
+    return sessionId;
   }
 
   /**

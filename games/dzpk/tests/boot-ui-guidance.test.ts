@@ -13,8 +13,8 @@ class Events {
   emit(type: string, value?: unknown): void {
     this.listeners.filter((item) => item.type === type).forEach((item) => item.callback.call(item.target, value));
   }
-  addEventListener(type: string, callback: (...args: any[]) => void): void { this.on(type, callback); }
-  removeEventListener(type: string, callback: (...args: any[]) => void): void { this.off(type, callback); }
+  addEventListener(type: string, callback: (...args: any[]) => void, capture?: boolean): void { this.on(type, callback, undefined, capture); }
+  removeEventListener(type: string, callback: (...args: any[]) => void, capture?: boolean): void { this.off(type, callback, undefined, capture); }
 }
 
 class TestVec3 {
@@ -33,17 +33,20 @@ class TestNode extends Events {
   static EventType = {
     TOUCH_START: 'touch-start', TOUCH_MOVE: 'touch-move', TOUCH_END: 'touch-end',
     MOUSE_DOWN: 'mouse-down', MOUSE_MOVE: 'mouse-move', MOUSE_UP: 'mouse-up', MOUSE_WHEEL: 'mouse-wheel',
+    CHILD_ADDED: 'child-added',
   };
   active = false;
   valid = true;
   parent: TestNode | null = null;
   children: TestNode[] = [];
   position = new TestVec3();
+  scale = new TestVec3(1, 1, 1);
   components = new Map<any, any>();
   constructor(public name = '') { super(); }
   getChildByName(name: string) { return this.children.find((child) => child.name === name) ?? null; }
   add(name: string) { const child = new TestNode(name); child.parent = this; child.active = true; this.children.push(child); return child; }
   setPosition(x: number, y: number, z: number) { this.position = new TestVec3(x, y, z); }
+  setScale(x: number, y: number, z: number) { this.scale = new TestVec3(x, y, z); }
   getComponent(type: any) { return this.components.get(type) ?? null; }
   addComponent(type: any) { const component = new type(); component.node = this; this.components.set(type, component); return component; }
   getComponentsInChildren(type: any): any[] {
@@ -56,6 +59,7 @@ class TestButton extends TestComponent { static EventType = { CLICK: 'click' }; 
 class TestToggle extends TestComponent { interactable = true; isChecked = false; }
 class TestSlider extends TestComponent { progress = 0; }
 class TestProgressBar extends TestComponent { progress = 0; }
+class TestUITransform extends TestComponent { contentSize = { width: 1624, height: 750 }; }
 class TestSkeleton extends TestComponent { setCompleteListener(_callback: unknown) {} setAnimation(..._args: unknown[]) {} }
 class TestLabel {
   static Overflow = { SHRINK: 2 };
@@ -74,11 +78,26 @@ class TestLabel {
   outlineColor = new TestColor(11, 22, 33, 255);
   color = new TestColor(240, 240, 240, 255);
 }
-const view = new Events();
+const policies = { SHOW_ALL: 2, FIXED_HEIGHT: 3, FIXED_WIDTH: 4 };
+const resolutionCalls: Array<{ width: number; height: number; policy: number }> = [];
+let visibleSize = { width: 1334, height: 750 };
+const view = Object.assign(new Events(), {
+  getVisibleSize: () => ({ ...visibleSize }),
+  setDesignResolutionSize(width: number, height: number, policy: number) {
+    resolutionCalls.push({ width, height, policy });
+    const browser = globalThis.window;
+    const frameWidth = browser?.visualViewport?.width || browser?.innerWidth || 1334;
+    const frameHeight = browser?.visualViewport?.height || browser?.innerHeight || 750;
+    visibleSize = policy === policies.FIXED_HEIGHT ? { width: height * frameWidth / frameHeight, height }
+      : policy === policies.FIXED_WIDTH ? { width, height: width * frameHeight / frameWidth } : { width, height };
+    view.emit('canvas-resize'); // Deliberately exercise the synchronous recursion guard.
+  },
+});
 const engineScreen = { windowSize: { width: 390, height: 219 } };
 mock.module('cc', () => ({
   Node: TestNode, Label: TestLabel, Event: class {}, Color: TestColor, Component: TestComponent,
   Button: TestButton, Toggle: TestToggle, Slider: TestSlider, ProgressBar: TestProgressBar,
+  UITransform: TestUITransform, ResolutionPolicy: policies,
   Sprite: class {}, SpriteAtlas: class {}, UIOpacity: class {}, Vec3: TestVec3, Animation: class {}, Tween: class {},
   NodePool: class {},
   instantiate: () => { throw new Error('Prefab instantiation is outside this focused test'); },
@@ -89,12 +108,14 @@ mock.module('cc', () => ({
   isValid: (value: { valid?: boolean } | undefined) => !!value && value.valid !== false,
 }));
 const { DzpkViewportGuidance } = await import('../creator-3.8.x-upgrade/assets/Standalone/DzpkViewportGuidance');
+const { DzpkBrowserPresentation } = await import('../creator-3.8.x-upgrade/assets/Standalone/DzpkBrowserPresentation');
 const { DzpkUiMessageService } = await import('../creator-3.8.x-upgrade/assets/Standalone/DzpkUiMessageService');
 const { applyDzpkAmountLabel, restoreDzpkAmountLabel, DZPK_ROOM_SYSTEM_FONT_STYLE } = await import('../creator-3.8.x-upgrade/assets/Standalone/DzpkUiHelpers');
 const { installDzpkRuntimeServices, clearDzpkRuntimeServices } = await import('../creator-3.8.x-upgrade/assets/Standalone/DzpkRuntimeServices');
 const { DzpkTablePresentation } = await import('../creator-3.8.x-upgrade/assets/DZPK/_semantic/DzpkTablePresentation');
 const { DzpkTableGameController } = await import('../creator-3.8.x-upgrade/assets/DZPK/_semantic/DzpkTableGameController');
 const { DzpkRoomSelectionController } = await import('../creator-3.8.x-upgrade/assets/DZPK/_semantic/DzpkRoomSelectionController');
+const { DzpkViewNavigator } = await import('../creator-3.8.x-upgrade/assets/Standalone/DzpkViewNavigator');
 const { DzpkTableStateModel, DzpkParticipantState } = await import('../creator-3.8.x-upgrade/assets/DZPK/_semantic/DzpkTableStateModel');
 const originalWindow = Object.getOwnPropertyDescriptor(globalThis, 'window');
 const disposables: Array<{ dispose(): void }> = [];
@@ -104,9 +125,32 @@ afterEach(() => {
   else Reflect.deleteProperty(globalThis, 'window');
   mock.restore();
   clearDzpkRuntimeServices();
+  resolutionCalls.length = 0;
+  visibleSize = { width: 1334, height: 750 };
 });
 
 describe('Room fallback style and raise panel regression', () => {
+  test('navigator missing transport fails without closing, then can retry and waits for server acknowledgment', async () => {
+    const canvas = new TestNode(); canvas.add('Room'); canvas.add('Game'); canvas.add('UIShow');
+    const tips: string[] = [];
+    let closed = 0;
+    const browser: any = { parent: null, opener: null, closed: false,
+      close() { closed++; this.closed = true; }, setTimeout() { return 1; } };
+    browser.parent = browser;
+    Object.defineProperty(globalThis, 'window', { configurable: true, value: browser });
+    const navigator = new DzpkViewNavigator(canvas as never, {} as never,
+      { postMessageTargetOrigin: '' } as never, {} as never, {} as never, { showTips: (text: string) => tips.push(text) } as never);
+    expect(await navigator.requestStandaloneExit({ closePage: true })).toBe(false);
+    expect(closed).toBe(0); expect(tips).toHaveLength(1);
+    let acknowledge!: (sid: string) => void;
+    navigator.setAuthenticatedTransport({ endAuthenticatedSession: () => new Promise<string>(resolve => { acknowledge = resolve; }) } as never);
+    const one = navigator.requestStandaloneExit({ closePage: true });
+    const two = navigator.requestStandaloneExit({ closePage: true });
+    expect(one).toBe(two); expect(closed).toBe(0);
+    acknowledge('sid_test');
+    expect(await one).toBe(true); expect(closed).toBe(1);
+  });
+
   test('Room fallback follows the existing caption rows without accumulating offsets or moving CNY', () => {
     const room = new TestNode('rooms');
     const card = room.add('1');
@@ -322,6 +366,42 @@ describe('Boot message and portrait guidance serialization', () => {
 });
 
 describe('Cocos portrait and low-balance behavior', () => {
+  test('fills wide and narrow landscape frames proportionally without recursive policy churn', () => {
+    const { browser, service, guidance } = fixture(2400, 750);
+    expect(resolutionCalls).toEqual([{ width: 1334, height: 750, policy: policies.FIXED_HEIGHT }]);
+    expect(guidance.active).toBe(false);
+    expect(visibleSize).toEqual({ width: 2400, height: 750 });
+    service.refresh(); view.emit('canvas-resize');
+    expect(resolutionCalls).toHaveLength(1);
+    browser.innerWidth = 1200; browser.innerHeight = 900; browser.emit('resize');
+    expect(resolutionCalls.at(-1)?.policy).toBe(policies.FIXED_WIDTH);
+    expect(visibleSize.width).toBe(1334); expect(visibleSize.height).toBeCloseTo(1000.5);
+    browser.innerWidth = 390; browser.innerHeight = 844; browser.visualViewport.emit('resize');
+    expect(resolutionCalls.at(-1)?.policy).toBe(policies.SHOW_ALL);
+    expect(guidance.active).toBe(true);
+  });
+
+  test('covers only original Room/Table backgrounds on attachment and repeated resizing without scale drift', () => {
+    const { browser, service, rooms, games } = fixture(2400, 750);
+    const room = new TestNode('Room'); room.active = true;
+    const background = room.add('bg'); background.addComponent(TestUITransform);
+    const ui = room.add('roomChoice');
+    room.parent = rooms; rooms.children.push(room); rooms.emit(TestNode.EventType.CHILD_ADDED, room);
+    expect(background.scale.x).toBeCloseTo(2400 / 1624);
+    expect(background.scale.y).toBeCloseTo(2400 / 1624);
+    expect(ui.scale).toEqual(new TestVec3(1, 1, 1));
+    const table = new TestNode('DZPKMain'); table.active = true;
+    const tableBackground = table.add('bg'); tableBackground.addComponent(TestUITransform);
+    table.parent = games; games.children.push(table); games.emit(TestNode.EventType.CHILD_ADDED, table);
+    expect(tableBackground.scale.x).toBeCloseTo(2400 / 1624);
+    service.refresh(); service.refresh();
+    expect(background.scale.x).toBeCloseTo(2400 / 1624);
+    browser.innerWidth = 1334; browser.innerHeight = 750; browser.emit('resize');
+    expect(background.scale).toEqual(new TestVec3(1, 1, 1));
+    expect(tableBackground.scale).toEqual(new TestVec3(1, 1, 1));
+    service.dispose();
+    expect(rooms.listeners).toHaveLength(0); expect(games.listeners).toHaveLength(0);
+  });
   test('reads the document viewport rather than the adapted landscape canvas and restores input after rotation', () => {
     const { browser, canvas, guidance } = fixture();
     expect(engineScreen.windowSize).toEqual({ width: 390, height: 219 });
@@ -392,12 +472,85 @@ describe('Cocos portrait and low-balance behavior', () => {
   });
 });
 
-function fixture() {
-  const browser = Object.assign(new Events(), { innerWidth: 390, innerHeight: 844, visualViewport: new Events() });
+function fixture(width = 390, height = 844) {
+  const browser = Object.assign(new Events(), { innerWidth: width, innerHeight: height, visualViewport: new Events() });
   Object.defineProperty(globalThis, 'window', { configurable: true, value: browser });
   const canvas = new TestNode();
+  const rooms = canvas.add('Room'); const games = canvas.add('Game');
   const guidance = new TestNode();
   const service = new DzpkViewportGuidance(canvas as never, guidance as never);
   disposables.push(service);
-  return { browser, canvas, guidance, service };
+  return { browser, canvas, guidance, service, rooms, games };
+}
+
+describe('browser fullscreen lifecycle', () => {
+  test('uses the first trusted gesture synchronously once and never claims fullscreen from a resolved promise', async () => {
+    const fixture = browserFixture('standard');
+    const service = new DzpkBrowserPresentation(fixture.browser as never, () => undefined);
+    disposables.push(service);
+    expect(service.fullscreenSupported).toBe(true); expect(service.fullscreenAttempted).toBe(false);
+    expect(fixture.styles[0].textContent).toContain('100dvh');
+    fixture.document.emit('pointerup', { isTrusted: false });
+    expect(fixture.requests()).toBe(0);
+    fixture.document.emit('touchend', { isTrusted: true });
+    expect(fixture.requests()).toBe(1); // No async wait: the API was called inside the trusted event.
+    await Promise.resolve();
+    expect(service.nativeFullscreenActive).toBe(false);
+    fixture.document.fullscreenElement = fixture.root;
+    fixture.document.emit('fullscreenchange');
+    expect(service.nativeFullscreenActive).toBe(true);
+    fixture.document.fullscreenElement = null; fixture.document.emit('fullscreenchange');
+    fixture.document.emit('pointerup', { isTrusted: true });
+    expect(fixture.requests()).toBe(1);
+    service.dispose();
+    expect(fixture.document.listeners).toHaveLength(0); expect(fixture.styles).toHaveLength(0);
+  });
+
+  test('keeps unsupported or denied browsers in viewport mode without retries or dangling listeners', async () => {
+    for (const mode of ['unsupported', 'denied'] as const) {
+      const fixture = browserFixture(mode);
+      const service = new DzpkBrowserPresentation(fixture.browser as never, () => undefined);
+      disposables.push(service);
+      fixture.document.emit('pointerup', { isTrusted: true });
+      await Promise.resolve();
+      expect(service.fullscreenSupported).toBe(mode !== 'unsupported');
+      expect(service.nativeFullscreenActive).toBe(false);
+      expect(fixture.requests()).toBe(mode === 'denied' ? 1 : 0);
+      fixture.document.emit('touchend', { isTrusted: true });
+      expect(fixture.requests()).toBe(mode === 'denied' ? 1 : 0);
+      service.dispose();
+      expect(fixture.document.listeners).toHaveLength(0); expect(fixture.styles).toHaveLength(0);
+    }
+  });
+
+  test('uses existing activation and the WebKit API, while disposal before a gesture prevents any request', () => {
+    const active = browserFixture('webkit'); active.browser.navigator.userActivation.isActive = true;
+    const activated = new DzpkBrowserPresentation(active.browser as never, () => undefined);
+    disposables.push(activated);
+    expect(active.requests()).toBe(1);
+    const pending = browserFixture('standard');
+    const disposed = new DzpkBrowserPresentation(pending.browser as never, () => undefined);
+    disposed.dispose();
+    pending.document.emit('touchend', { isTrusted: true });
+    expect(pending.requests()).toBe(0);
+    expect(pending.document.listeners).toHaveLength(0);
+  });
+});
+
+function browserFixture(mode: 'standard' | 'webkit' | 'unsupported' | 'denied') {
+  let requests = 0;
+  const styles: any[] = [];
+  const root: Record<string, unknown> = {};
+  const document = Object.assign(new Events(), { documentElement: root, fullscreenEnabled: true,
+    fullscreenElement: null as Record<string, unknown> | null,
+    head: { appendChild(style: unknown) { styles.push(style); } },
+    createElement() { const style = { textContent: '', setAttribute() {}, remove() { const index = styles.indexOf(style); if (index >= 0) styles.splice(index, 1); } }; return style; },
+  });
+  if (mode === 'standard' || mode === 'denied') root.requestFullscreen = (options: unknown) => {
+    requests += 1; expect(options).toEqual({ navigationUI: 'hide' });
+    return mode === 'denied' ? Promise.reject(new Error('denied')) : Promise.resolve();
+  };
+  if (mode === 'webkit') root.webkitRequestFullscreen = () => { requests += 1; };
+  const browser = { document, navigator: { maxTouchPoints: 1, userAgent: 'offline touch device', userActivation: { isActive: false } } };
+  return { document, root, styles, browser, requests: () => requests };
 }
