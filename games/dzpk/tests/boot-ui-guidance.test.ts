@@ -55,6 +55,23 @@ class TestNode extends Events {
   click() { if (this.getComponent(TestButton)?.interactable && this.active) this.emit('click', { target: this }); }
 }
 class TestComponent { node = new TestNode(); }
+class TestAudioSource extends TestComponent {
+  static EventType = { STARTED: 'started', ENDED: 'ended' };
+  volume = 1; loop = false; playOnAwake = true; clip: unknown = null;
+  playing = false; playCalls = 0; pauseCalls = 0; oneShots: unknown[] = [];
+  onPlay: (() => void) | null = null;
+  play() { this.playCalls++; this.onPlay?.(); }
+  start() { this.playing = true; this.node.emit(TestAudioSource.EventType.STARTED); }
+  pause() { this.pauseCalls++; this.playing = false; }
+  stop() { this.playing = false; }
+  playOneShot(clip: unknown) { this.oneShots.push(clip); }
+}
+const audioStorage = new Map<string, string>();
+let storageThrows = false;
+const audioSys = { isBrowser: true, localStorage: {
+  getItem(key: string) { if (storageThrows) throw new Error('storage unavailable'); return audioStorage.get(key) ?? null; },
+  setItem(key: string, value: string) { if (storageThrows) throw new Error('storage unavailable'); audioStorage.set(key, value); },
+} };
 class TestButton extends TestComponent { static EventType = { CLICK: 'click' }; interactable = true; }
 class TestToggle extends TestComponent { interactable = true; isChecked = false; }
 class TestSlider extends TestComponent { progress = 0; }
@@ -98,6 +115,7 @@ mock.module('cc', () => ({
   Node: TestNode, Label: TestLabel, Event: class {}, Color: TestColor, Component: TestComponent,
   Button: TestButton, Toggle: TestToggle, Slider: TestSlider, ProgressBar: TestProgressBar,
   UITransform: TestUITransform, ResolutionPolicy: policies,
+  AudioSource: TestAudioSource, sys: audioSys,
   Sprite: class {}, SpriteAtlas: class {}, UIOpacity: class {}, Vec3: TestVec3, Animation: class {}, Tween: class {},
   NodePool: class {},
   instantiate: () => { throw new Error('Prefab instantiation is outside this focused test'); },
@@ -109,6 +127,7 @@ mock.module('cc', () => ({
 }));
 const { DzpkViewportGuidance } = await import('../creator-3.8.x-upgrade/assets/Standalone/DzpkViewportGuidance');
 const { DzpkBrowserPresentation } = await import('../creator-3.8.x-upgrade/assets/Standalone/DzpkBrowserPresentation');
+const { DzpkAudioService } = await import('../creator-3.8.x-upgrade/assets/Standalone/DzpkAudioService');
 const { DzpkUiMessageService } = await import('../creator-3.8.x-upgrade/assets/Standalone/DzpkUiMessageService');
 const { applyDzpkAmountLabel, restoreDzpkAmountLabel, DZPK_ROOM_SYSTEM_FONT_STYLE } = await import('../creator-3.8.x-upgrade/assets/Standalone/DzpkUiHelpers');
 const { installDzpkRuntimeServices, clearDzpkRuntimeServices } = await import('../creator-3.8.x-upgrade/assets/Standalone/DzpkRuntimeServices');
@@ -127,6 +146,7 @@ afterEach(() => {
   clearDzpkRuntimeServices();
   resolutionCalls.length = 0;
   visibleSize = { width: 1334, height: 750 };
+  audioStorage.clear(); storageThrows = false;
 });
 
 describe('Room fallback style and raise panel regression', () => {
@@ -357,6 +377,7 @@ describe('Boot message and portrait guidance serialization', () => {
     const source = readFileSync(new URL('Standalone/StandaloneBoot.ts', assetPath), 'utf8');
     expect(source).toContain('new DzpkViewportGuidance(this.node, this.portraitGuidance)');
     expect(source).toContain('this.viewportGuidance?.dispose()');
+    expect(source).toContain('this.audioService?.dispose()');
     expect(source).toContain('this.viewportGuidance?.refresh()');
     expect(source).toContain('view.setDesignResolutionSize(1334, 750, ResolutionPolicy.SHOW_ALL)');
     const metadata = JSON.parse(readFileSync(new URL('Standalone/DzpkViewportGuidance.ts.meta', assetPath), 'utf8'));
@@ -484,6 +505,33 @@ function fixture(width = 390, height = 844) {
 }
 
 describe('browser fullscreen lifecycle', () => {
+  test('does not overlap pending fullscreen requests and retries after a rejected request without overriding a later success', async () => {
+    const fixture = browserFixture('standard');
+    let requests = 0;
+    let reject!: (error: Error) => void;
+    fixture.root.requestFullscreen = () => { requests++; return new Promise<void>((_resolve, fail) => { reject = fail; }); };
+    const service = new DzpkBrowserPresentation(fixture.browser as never, () => undefined); disposables.push(service);
+    fixture.document.emit('touchend', { isTrusted: true, timeStamp: 1000 });
+    fixture.document.emit('pointerup', { isTrusted: true, timeStamp: 2000 });
+    expect(requests).toBe(1);
+    reject(new Error('denied')); await Promise.resolve();
+    fixture.document.emit('touchend', { isTrusted: true, timeStamp: 3000 });
+    expect(requests).toBe(2);
+    fixture.document.fullscreenElement = fixture.root; fixture.document.emit('fullscreenchange');
+    fixture.document.fullscreenElement = null; fixture.document.emit('fullscreenchange');
+    reject(new Error('late rejection')); await Promise.resolve();
+    fixture.document.emit('touchend', { isTrusted: true, timeStamp: 5000 });
+    expect(requests).toBe(2); expect(service.nativeFullscreenActive).toBe(false);
+  });
+
+  test('disabled permission does not request fullscreen or attach gesture listeners', () => {
+    const fixture = browserFixture('standard'); fixture.document.fullscreenEnabled = false;
+    const service = new DzpkBrowserPresentation(fixture.browser as never, () => undefined); disposables.push(service);
+    fixture.document.emit('touchend', { isTrusted: true });
+    expect(service.fullscreenSupported).toBe(false); expect(fixture.requests()).toBe(0);
+    expect(fixture.document.listeners).toHaveLength(0); expect(fixture.styles[0].textContent).toContain('100dvh');
+  });
+
   test('uses the first trusted gesture synchronously once and never claims fullscreen from a resolved promise', async () => {
     const fixture = browserFixture('standard');
     const service = new DzpkBrowserPresentation(fixture.browser as never, () => undefined);
@@ -506,28 +554,47 @@ describe('browser fullscreen lifecycle', () => {
     expect(fixture.document.listeners).toHaveLength(0); expect(fixture.styles).toHaveLength(0);
   });
 
-  test('keeps unsupported or denied browsers in viewport mode without retries or dangling listeners', async () => {
+  test('keeps unsupported browsers in viewport mode and bounds denied retries to distinct trusted gestures', async () => {
     for (const mode of ['unsupported', 'denied'] as const) {
       const fixture = browserFixture(mode);
       const service = new DzpkBrowserPresentation(fixture.browser as never, () => undefined);
       disposables.push(service);
-      fixture.document.emit('pointerup', { isTrusted: true });
+      fixture.document.emit('pointerup', { isTrusted: true, timeStamp: 1000 });
       await Promise.resolve();
       expect(service.fullscreenSupported).toBe(mode !== 'unsupported');
       expect(service.nativeFullscreenActive).toBe(false);
       expect(fixture.requests()).toBe(mode === 'denied' ? 1 : 0);
-      fixture.document.emit('touchend', { isTrusted: true });
+      fixture.document.emit('touchend', { isTrusted: true, timeStamp: 1001 });
+      expect(fixture.requests()).toBe(mode === 'denied' ? 1 : 0); // Paired pointer/touch events are one gesture.
+      fixture.document.emit('touchend', { isTrusted: false, timeStamp: 2000 });
       expect(fixture.requests()).toBe(mode === 'denied' ? 1 : 0);
+      fixture.document.emit('touchend', { isTrusted: true, timeStamp: 2000 });
+      await Promise.resolve();
+      fixture.document.emit('pointerup', { isTrusted: true, timeStamp: 3000 });
+      await Promise.resolve();
+      fixture.document.emit('touchend', { isTrusted: true, timeStamp: 4000 });
+      expect(fixture.requests()).toBe(mode === 'denied' ? 3 : 0);
       service.dispose();
       expect(fixture.document.listeners).toHaveLength(0); expect(fixture.styles).toHaveLength(0);
     }
   });
 
-  test('uses existing activation and the WebKit API, while disposal before a gesture prevents any request', () => {
-    const active = browserFixture('webkit'); active.browser.navigator.userActivation.isActive = true;
+  test('waits for audio-first event propagation even with activation, and supports WebKit/Mozilla/MS without claiming success', () => {
+    for (const mode of ['webkit', 'moz', 'ms'] as const) {
+    const active = browserFixture(mode); active.browser.navigator.userActivation.isActive = true;
     const activated = new DzpkBrowserPresentation(active.browser as never, () => undefined);
     disposables.push(activated);
+    expect(active.requests()).toBe(0);
+    active.document.emit('touchend', { isTrusted: true, timeStamp: 1000 });
+    expect(active.requests()).toBe(1); expect(activated.nativeFullscreenActive).toBe(false);
+    const elementKey = mode === 'webkit' ? 'webkitFullscreenElement' : mode === 'moz' ? 'mozFullScreenElement' : 'msFullscreenElement';
+    const changeEvent = mode === 'webkit' ? 'webkitfullscreenchange' : mode === 'moz' ? 'mozfullscreenchange' : 'MSFullscreenChange';
+    Reflect.set(active.document, elementKey, active.root); active.document.emit(changeEvent);
+    expect(activated.nativeFullscreenActive).toBe(true);
+    Reflect.set(active.document, elementKey, null); active.document.emit(changeEvent);
+    active.document.emit('touchend', { isTrusted: true, timeStamp: 3000 });
     expect(active.requests()).toBe(1);
+    }
     const pending = browserFixture('standard');
     const disposed = new DzpkBrowserPresentation(pending.browser as never, () => undefined);
     disposed.dispose();
@@ -537,7 +604,7 @@ describe('browser fullscreen lifecycle', () => {
   });
 });
 
-function browserFixture(mode: 'standard' | 'webkit' | 'unsupported' | 'denied') {
+function browserFixture(mode: 'standard' | 'webkit' | 'moz' | 'ms' | 'unsupported' | 'denied') {
   let requests = 0;
   const styles: any[] = [];
   const root: Record<string, unknown> = {};
@@ -551,6 +618,141 @@ function browserFixture(mode: 'standard' | 'webkit' | 'unsupported' | 'denied') 
     return mode === 'denied' ? Promise.reject(new Error('denied')) : Promise.resolve();
   };
   if (mode === 'webkit') root.webkitRequestFullscreen = () => { requests += 1; };
-  const browser = { document, navigator: { maxTouchPoints: 1, userAgent: 'offline touch device', userActivation: { isActive: false } } };
+  if (mode === 'moz') root.mozRequestFullScreen = () => { requests += 1; };
+  if (mode === 'ms') root.msRequestFullscreen = () => { requests += 1; };
+  const browser = Object.assign(new Events(), { document, navigator: { maxTouchPoints: 1, userAgent: 'offline touch device', userActivation: { isActive: false } } });
   return { document, root, styles, browser, requests: () => requests };
 }
+
+describe('browser audio defaults, activation and asynchronous cleanup', () => {
+  test('missing/empty/invalid storage defaults to one, explicit zero survives and storage failures do not interrupt play', () => {
+    for (const value of [undefined, '', '  ', 'invalid', 'NaN', 'Infinity', '-1', '2', '0', '0.35']) {
+      audioStorage.clear();
+      if (value !== undefined) { audioStorage.set('MusicVolume', value); audioStorage.set('SoundVolume', value); }
+      const { service } = audioFixture();
+      const expected = value === '0' ? 0 : value === '0.35' ? 0.35 : 1;
+      expect(service.getMusicVolume()).toBe(expected); expect(service.getSoundVolume()).toBe(expected);
+      service.dispose();
+    }
+    storageThrows = true;
+    const { service } = audioFixture();
+    expect(service.getMusicVolume()).toBe(1); expect(service.getSoundVolume()).toBe(1);
+    expect(() => { service.setMusicVolume(0); service.setSoundVolume(0.4); }).not.toThrow();
+    expect(service.getMusicVolume()).toBe(0); expect(service.getSoundVolume()).toBe(0.4);
+    storageThrows = false; service.setSoundVolume(0);
+    expect(audioStorage.get('SoundVolume')).toBe('0');
+  });
+
+  test('preloads before gestures, ignores synthetic/early input, and unlocks effects only after a real STARTED state', async () => {
+    const { service, browser, music, effect, loads, gesture } = audioFixture();
+    service.playBackgroundMusic('sound/bgm'); expect(loads).toHaveLength(1);
+    gesture('touchend'); gesture('pointerup', { pointerType: 'touch' });
+    expect(music.playCalls).toBe(0); expect(loads).toHaveLength(1);
+    loads[0].resolve({ name: 'bgm' }); await flushAudio();
+    expect(music.clip).toEqual({ name: 'bgm' }); expect(music.playCalls).toBe(0);
+    gesture('touchend', { isTrusted: false }); gesture('pointerdown');
+    gesture('pointerup', { pointerType: 'mouse' }); gesture('mousedown', { button: 2 });
+    gesture('keydown', { key: 'Escape' }); gesture('keydown', { key: 'a', ctrlKey: true });
+    gesture('keydown', { key: 'a', repeat: true }); expect(music.playCalls).toBe(0);
+    gesture('touchend'); expect(music.playCalls).toBe(1); // Synchronous, without waiting for a microtask.
+    service.playButtonSound(); expect(loads).toHaveLength(1);
+    music.node.emit(TestAudioSource.EventType.STARTED); // A stale event without playing cannot unlock.
+    service.playButtonSound(); expect(loads).toHaveLength(1);
+    gesture('pointerup', { pointerType: 'touch' }); expect(music.playCalls).toBe(2);
+    music.start(); service.playButtonSound(); expect(loads[1].path).toBe('sound/button');
+    loads[1].resolve({ name: 'button' }); await flushAudio();
+    expect(effect.oneShots).toEqual([{ name: 'button' }]);
+    gesture('touchend'); expect(music.playCalls).toBe(2);
+    expect(browser.listeners.every(listener => listener.capture === true)).toBe(true);
+  });
+
+  test('retries failed loading/play on a later trusted gesture without starting an outdated BGM request', async () => {
+    spyOn(console, 'warn').mockImplementation(() => {});
+    const { service, music, loads, gesture } = audioFixture();
+    service.playBackgroundMusic('old'); service.playBackgroundMusic('new', false);
+    loads[0].resolve({ name: 'old' }); await flushAudio(); expect(music.clip).toBeNull();
+    loads[1].reject(new Error('temporary loading failure')); await flushAudio();
+    gesture('mousedown', { button: 0 }); expect(loads[2].path).toBe('new');
+    gesture('keydown', { key: 'Enter' }); expect(loads).toHaveLength(3);
+    loads[2].resolve({ name: 'new' }); await flushAudio();
+    expect(music.loop).toBe(false); expect(music.playCalls).toBe(0);
+    music.onPlay = () => { throw new Error('denied'); };
+    expect(() => gesture('keydown', { key: 'Enter' })).not.toThrow();
+    expect(music.playCalls).toBe(1);
+    music.onPlay = () => music.start(); gesture('mousedown', { button: 0 });
+    expect(music.playCalls).toBe(2); expect(music.playing).toBe(true);
+    service.playBackgroundMusic('third'); service.playBackgroundMusic('fourth');
+    loads[4].resolve({ name: 'fourth' }); await flushAudio();
+    loads[3].resolve({ name: 'third' }); await flushAudio();
+    expect(music.clip).toEqual({ name: 'fourth' }); expect(music.playCalls).toBe(3);
+    music.playing = false; music.node.emit(TestAudioSource.EventType.ENDED);
+    gesture('touchend'); expect(music.playCalls).toBe(3);
+  });
+
+  test('background pauses, late audio stays stopped, foreground can retry and stopped effects never reappear', async () => {
+    const { service, music, effect, loads, gesture } = audioFixture();
+    service.playBackgroundMusic('bgm'); loads[0].resolve({ name: 'bgm' }); await flushAudio();
+    music.onPlay = () => music.start(); gesture('touchend');
+    service.playSound('loop', true); loads[1].resolve({ name: 'loop' }); await flushAudio();
+    service.playSound('late');
+    service.pauseForBackground(); const before = music.playCalls;
+    loads[2].resolve({ name: 'late' }); await flushAudio();
+    gesture('touchend'); expect(music.playCalls).toBe(before); expect(effect.oneShots).toHaveLength(0);
+    music.start(); expect(music.playing).toBe(false);
+    music.onPlay = null; service.resumeAfterForeground();
+    expect(music.playCalls).toBe(before + 1); expect(effect.playCalls).toBe(2);
+    gesture('touchend'); expect(music.playCalls).toBe(before + 2);
+    service.playSound('cancelled-loop', true); service.stopAllEffects();
+    loads[3].resolve({ name: 'cancelled-loop' }); await flushAudio();
+    expect(effect.clip).toBeNull(); expect(effect.loop).toBe(false);
+    service.playBackgroundMusic('while-hidden'); service.pauseForBackground();
+    loads[4].resolve({ name: 'hidden' }); await flushAudio();
+    expect(music.playCalls).toBe(before + 2);
+    service.resumeAfterForeground(); expect(music.playCalls).toBe(before + 3);
+  });
+
+  test('dispose cancels late music/effects and removes every owned listener without future playback', async () => {
+    const { service, browser, music, effect, loads, gesture } = audioFixture();
+    service.playBackgroundMusic('bgm'); loads[0].resolve({ name: 'bgm' }); await flushAudio();
+    music.onPlay = () => music.start(); gesture('touchend');
+    service.playSound('late-effect'); service.playBackgroundMusic('late-music');
+    service.dispose(); service.dispose();
+    const calls = music.playCalls;
+    loads[1].resolve({ name: 'late-effect' }); loads[2].resolve({ name: 'late-music' }); await flushAudio();
+    gesture('touchend'); service.resumeAfterForeground(); service.playBackgroundMusic('after-dispose'); service.playButtonSound();
+    expect(music.playCalls).toBe(calls); expect(music.clip).toBeNull(); expect(effect.clip).toBeNull();
+    expect(effect.oneShots).toHaveLength(0); expect(loads).toHaveLength(3);
+    expect(browser.listeners).toHaveLength(0); expect(music.node.listeners).toHaveLength(0);
+  });
+
+  test('audio capture precedes fullscreen on the real canvas even when Cocos stops propagation to document', async () => {
+    const fixture = browserFixture('standard');
+    const canvas = new Events();
+    Reflect.set(fixture.document, 'getElementById', (id: string) => id === 'GameCanvas' ? canvas : null);
+    const fullscreen = new DzpkBrowserPresentation(fixture.browser as never, () => undefined); disposables.push(fullscreen);
+    const audio = audioFixture(fixture.browser);
+    audio.service.playBackgroundMusic('bgm'); audio.loads[0].resolve({ name: 'bgm' }); await flushAudio();
+    const order: string[] = [];
+    audio.music.onPlay = () => order.push('audio');
+    fixture.root.requestFullscreen = () => { order.push('fullscreen'); return Promise.resolve(); };
+    expect(canvas.listeners.filter(item => item.type === 'touchend').every(item => item.capture !== true)).toBe(true);
+    expect(fixture.document.listeners.filter(item => item.type === 'touchend')).toHaveLength(0);
+    const event = { type: 'touchend', isTrusted: true, timeStamp: 1000 };
+    fixture.browser.emit('touchend', event); order.push('engine-canvas'); canvas.emit('touchend', event);
+    expect(order).toEqual(['audio', 'engine-canvas', 'fullscreen']);
+    fullscreen.dispose(); expect(canvas.listeners).toHaveLength(0);
+  });
+});
+
+function audioFixture(browser = new Events()) {
+  Object.defineProperty(globalThis, 'window', { configurable: true, value: browser });
+  const loads: Array<{ path: string; resolve(clip: unknown): void; reject(error: Error): void }> = [];
+  const loader = { loadOriginalAudioClip: (path: string) => new Promise((resolve, reject) => loads.push({ path, resolve, reject })) };
+  const service = new DzpkAudioService(new TestNode() as never, loader as never); disposables.push(service);
+  const music = Reflect.get(service, 'musicSource') as TestAudioSource;
+  const effect = Reflect.get(service, 'effectSource') as TestAudioSource;
+  return { service, browser, music, effect, loads,
+    gesture: (type: string, extra: Record<string, unknown> = {}) => browser.emit(type, { type, isTrusted: true, ...extra }) };
+}
+
+async function flushAudio() { await Promise.resolve(); await Promise.resolve(); }

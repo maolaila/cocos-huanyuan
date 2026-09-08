@@ -75,6 +75,7 @@ export class DzpkStandaloneBoot extends Component {
     game.off(Game.EVENT_HIDE, this.handleApplicationEnteredBackground, this);
     game.off(Game.EVENT_SHOW, this.handleApplicationReturnedToForeground, this);
     this.viewportGuidance?.dispose();
+    this.audioService?.dispose();
     this.authenticatedTransport?.closeAuthenticatedConnection();
     clearDzpkRuntimeServices();
   }
