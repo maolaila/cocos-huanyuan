@@ -107,6 +107,33 @@ afterEach(() => {
 });
 
 describe('Room fallback style and raise panel regression', () => {
+  test('Room fallback follows the existing caption rows without accumulating offsets or moving CNY', () => {
+    const room = new TestNode('rooms');
+    const card = room.add('1');
+    card.add('dzpk_room_xiazhu').position.y = 49.213;
+    card.add('image_free').position.y = -41.643;
+    const amounts = ['room_xz', 'room_xz copy', 'room_zr'].map((name) => {
+      const label = card.add(name).addComponent(TestLabel) as TestLabel;
+      label.font = { name: 'original-room-font' };
+      label.node.position.y = name === 'room_zr' ? -52.202 : 39.634;
+      return label;
+    });
+    const context = { currency: 'USDT', roomConfig: { '2': { level: 2, min_gold: 200000, max_gold: 1000000, doublescore: 1000 } } };
+    installDzpkRuntimeServices({ gameContext: context } as never);
+    const controller = new DzpkRoomSelectionController();
+    controller.roomChoiceContainer = room as never;
+    const render = () => (controller as unknown as { renderRoomConfigurationLabels(): void }).renderRoomConfigurationLabels();
+    for (const currency of ['USDT', 'USD', 'VND']) {
+      context.currency = currency;
+      render(); render();
+      expect(amounts.map((label) => label.node.position.y)).toEqual([49.213, 49.213, -41.643]);
+    }
+    context.currency = 'CNY'; render();
+    expect(amounts.map((label) => label.node.position.y)).toEqual([39.634, 39.634, -52.202]);
+    context.currency = 'USDT'; render();
+    expect(amounts.map((label) => label.node.position.y)).toEqual([49.213, 49.213, -41.643]);
+  });
+
   test('Room fallback uses font-size line height and restores the original CNY line height and style', () => {
     const label = new TestLabel();
     const originalFont = { name: 'room_xz.fnt' };

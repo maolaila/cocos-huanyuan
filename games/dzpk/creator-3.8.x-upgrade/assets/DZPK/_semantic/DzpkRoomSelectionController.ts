@@ -207,6 +207,7 @@ export class DzpkRoomSelectionController extends Component {
           sourceHundredMillionDecimals: 0,
           bitmapFontProfile: 'CNY_INTEGER_UNITS',
           roomSystemFontStyle: DZPK_ROOM_SYSTEM_FONT_STYLE.limit,
+          roomSystemFontRowY: roomChoiceNode.getChildByName('image_free')?.position.y,
         });
       }
 
@@ -249,6 +250,7 @@ export class DzpkRoomSelectionController extends Component {
         sourceHundredMillionDecimals: 0,
         bitmapFontProfile: 'CNY_INTEGER_UNITS',
         roomSystemFontStyle: DZPK_ROOM_SYSTEM_FONT_STYLE.limit,
+        roomSystemFontRowY: roomChoiceNode.getChildByName('dzpk_room_xiazhu')?.position.y,
       },
     );
   }

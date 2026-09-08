@@ -59,6 +59,8 @@ export interface DzpkAmountLabelOptions extends DzpkAmountFormatOptions {
   systemFontScale?: number;
   /** 仅 Room 缺字回退：保留声明字号，单行行高取字号；CNY BMFont 恢复原行高。 */
   roomSystemFontStyle?: DzpkRoomSystemFontStyle;
+  /** 同一张 Room 卡片中相邻美术字的行中心；仅系统字体回退对齐，BMFont 保留原位置。 */
+  roomSystemFontRowY?: number;
 }
 
 interface OriginalLabelState {
@@ -261,7 +263,13 @@ export function applyDzpkAmountLabel(
     // TTF 单行行高跟随字号，在原 UITransform 内由 SHRINK 处理；不改节点位置或原 BMFont 行高。
     label.lineHeight = options.roomSystemFontStyle
       ? label.fontSize : Math.max(label.fontSize, originalState.lineHeight * systemFontScale);
-    if (options.roomSystemFontStyle) applyRoomSystemFontStyle(label, options.roomSystemFontStyle);
+    if (options.roomSystemFontStyle) {
+      applyRoomSystemFontStyle(label, options.roomSystemFontStyle);
+      // 原位图字的节点比“盲注/准入”行低，TTF 沿用它会错行；取现有美术节点，避免硬编码像素补偿。
+      if (Number.isFinite(options.roomSystemFontRowY)) {
+        label.node.setPosition(label.node.position.x, options.roomSystemFontRowY!, label.node.position.z);
+      }
+    }
   } else {
     label.font = originalState.font;
     if (!originalState.font || originalRoomLabelStyleByLabel.has(label)) label.fontFamily = originalState.fontFamily;
