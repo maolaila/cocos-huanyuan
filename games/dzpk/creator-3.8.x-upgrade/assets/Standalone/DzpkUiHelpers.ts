@@ -29,6 +29,7 @@ import {
 } from 'cc';
 
 export const ORIGINAL_WHITE_COLOR = new Color(255, 255, 255, 255);
+import { gameUnitDisplay, type GameHubMoneyDisplayContract } from './GameHubMoneyDisplay';
 export const ORIGINAL_ASH_COLOR = new Color(140, 140, 140, 255);
 
 export type DzpkBitmapFontProfile =
@@ -44,6 +45,7 @@ export const DZPK_ROOM_SYSTEM_FONT_STYLE = {
 type DzpkRoomSystemFontStyle = typeof DZPK_ROOM_SYSTEM_FONT_STYLE[keyof typeof DZPK_ROOM_SYSTEM_FONT_STYLE];
 
 export interface DzpkAmountFormatOptions {
+  moneyContract?: GameHubMoneyDisplayContract | null;
   maxCharacters?: number;
   sourceTenThousandDecimals?: number;
   sourceHundredMillionDecimals?: number;
@@ -184,6 +186,7 @@ export function formatDzpkCurrencyAmount(
   currencyCode: unknown,
   options: DzpkAmountFormatOptions = {},
 ): string {
+  if (options.moneyContract) return formatAgreedGameAmount(value, options.moneyContract, options.maxCharacters ?? 8);
   const amount = normalizeDisplayAmount(value);
   const currency = normalizeCurrencyCode(currencyCode);
   const maxCharacters = Math.max(3, Math.floor(options.maxCharacters ?? 8));
@@ -224,6 +227,17 @@ export function formatDzpkCurrencyAmount(
     '',
     '.',
   );
+}
+
+function formatAgreedGameAmount(value: unknown, contract: GameHubMoneyDisplayContract, maxCharacters: number): string {
+  const exact = gameUnitDisplay(value, contract).replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1');
+  if (exact.length <= maxCharacters) return exact;
+  for (const [scale, suffix] of [[3, 'K'], [6, 'M'], [9, 'B'], [12, 'T']] as const) {
+    if (exact.replace(/^-/, '').split('.')[0].length <= scale) continue;
+    const scaled = gameUnitDisplay(value, contract, scale).replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1');
+    if (scaled.length + suffix.length <= maxCharacters) return `${scaled}${suffix}`;
+  }
+  return exact; // 原 Label SHRINK，完整金额始终可以在精确钱包入口查看。
 }
 
 /**
@@ -277,7 +291,7 @@ export function applyDzpkAmountLabel(
     label.lineHeight = originalState.lineHeight;
   }
 
-  if (options.shrinkToFit !== false) constrainSingleLineLabel(label);
+  if (options.shrinkToFit !== false || options.moneyContract) constrainSingleLineLabel(label);
   else {
     label.overflow = originalState.overflow;
     label.enableWrapText = false;

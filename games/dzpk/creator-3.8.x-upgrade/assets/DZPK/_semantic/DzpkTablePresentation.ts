@@ -1224,6 +1224,7 @@ export class DzpkTablePresentation extends Component {
     sourceDecimals: number,
   ): string {
     return formatDzpkCurrencyAmount(amount, this.currencyCode(), {
+      moneyContract: requireDzpkRuntimeServices().gameContext.moneyContract,
       maxCharacters,
       sourceTenThousandDecimals: sourceDecimals,
       sourceHundredMillionDecimals: sourceDecimals,
@@ -1239,6 +1240,7 @@ export class DzpkTablePresentation extends Component {
     options: DzpkAmountLabelOptions = {},
   ): void {
     applyDzpkAmountLabel(label, amount, this.currencyCode(), {
+      moneyContract: requireDzpkRuntimeServices().gameContext.moneyContract,
       maxCharacters,
       sourceTenThousandDecimals: sourceDecimals,
       sourceHundredMillionDecimals: sourceDecimals,

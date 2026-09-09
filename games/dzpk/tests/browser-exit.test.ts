@@ -59,11 +59,12 @@ async function transportFixture(exitResponse: () => Promise<Response>) {
     }, fetch: async (url: string, options: RequestInit) => {
       requests.push({ url, options });
       if (url.endsWith('/context/init')) return Response.json({ code: 0, data: { gameCode: 'dzpk-955', mode: 'TRIAL',
-        sessionId: 'sid_test', sessionToken: 'st_fixture', currency: 'USDT', wallet: { mainBalance: '1.000007' }, sdkConfig: {} } });
+        sessionId: 'sid_test', sessionToken: 'st_fixture', currency: 'USDT', moneyContract: {schema:'gamehub-money-contract-v1',contractId:'fixture',currency:'USDT',baseUnit:1,displayScale:6}, wallet: { mainBalance: '1.000007' }, sdkConfig: {} } });
       return exitResponse();
     } };
   Object.defineProperty(globalThis, 'window', { configurable: true, value: browser });
-  Object.defineProperty(globalThis, 'document', { configurable: true, value: { body: { getAttribute: () => null } } });
+  const element = () => ({style:{cssText:''},append(){},addEventListener(){},remove(){}});
+  Object.defineProperty(globalThis, 'document', { configurable: true, value: {getElementById:()=>null,createElement:element, body: { getAttribute: () => null, append(){} } } });
   const transport = new GameHubAuthenticatedTransport(new GameContext(), { subscribeSourceEvent: () => ({}) } as never, {} as never, {} as never);
   await transport.initializeAuthenticatedSession();
   return { transport, requests, cache };

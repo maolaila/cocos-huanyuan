@@ -158,6 +158,7 @@ export class DzpkRoomSelectionController extends Component {
         gameContext.getKey('gold'),
         gameContext.currency,
         {
+          moneyContract: gameContext.moneyContract,
           maxCharacters: 9,
           groupedWallet: true,
           includeCurrencySymbol: true,
@@ -173,6 +174,7 @@ export class DzpkRoomSelectionController extends Component {
         gameContext.getKey('bank'),
         gameContext.currency,
         {
+          moneyContract: gameContext.moneyContract,
           maxCharacters: 9,
           groupedWallet: true,
           includeCurrencySymbol: true,
@@ -202,6 +204,7 @@ export class DzpkRoomSelectionController extends Component {
       const minimumEntryLabel = roomChoiceNode.getChildByName('room_zr')?.getComponent(Label);
       if (minimumEntryLabel) {
         applyDzpkAmountLabel(minimumEntryLabel, configuration.min_gold, gameContext.currency, {
+          moneyContract: gameContext.moneyContract,
           maxCharacters: 5,
           sourceTenThousandDecimals: 0,
           sourceHundredMillionDecimals: 0,
@@ -213,7 +216,7 @@ export class DzpkRoomSelectionController extends Component {
 
       const maximumCarryLabel = roomChoiceNode.getChildByName('3')?.getComponent(Label);
       if (!maximumCarryLabel || !configuration.max_gold) return;
-      if (shouldKeepOriginalMaximumCarryLabel(
+      if (!gameContext.moneyContract && shouldKeepOriginalMaximumCarryLabel(
         gameContext.currency,
         configuration.level,
         Number(configuration.max_gold),
@@ -222,6 +225,7 @@ export class DzpkRoomSelectionController extends Component {
         return;
       }
       applyDzpkAmountLabel(maximumCarryLabel, configuration.max_gold, gameContext.currency, {
+          moneyContract: gameContext.moneyContract,
         maxCharacters: 5,
         sourceTenThousandDecimals: 0,
         sourceHundredMillionDecimals: 0,
@@ -245,6 +249,7 @@ export class DzpkRoomSelectionController extends Component {
       amount,
       requireDzpkRuntimeServices().gameContext.currency,
       {
+        moneyContract: requireDzpkRuntimeServices().gameContext.moneyContract,
         maxCharacters,
         sourceTenThousandDecimals: 0,
         sourceHundredMillionDecimals: 0,

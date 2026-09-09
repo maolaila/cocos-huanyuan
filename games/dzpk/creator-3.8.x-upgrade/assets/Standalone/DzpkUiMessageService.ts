@@ -80,7 +80,7 @@ export class DzpkUiMessageService {
     const displayAmount = formatDzpkCurrencyAmount(
       minimumGoldAmount,
       this.gameContext.currency,
-      {
+      { moneyContract: this.gameContext.moneyContract,
         maxCharacters: 8,
         sourceTenThousandDecimals: 1,
         sourceHundredMillionDecimals: 1,

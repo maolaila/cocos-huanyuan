@@ -13,6 +13,7 @@
 export const DZPK_CLIENT_GAME_ID = 19;
 export const DZPK_GAME_CODE = 'dzpk-955';
 export const DZPK_BUNDLE_NAME = 'DZPK';
+import { requireMoneyDisplayContract, type GameHubMoneyDisplayContract } from './GameHubMoneyDisplay';
 
 export interface AuthenticatedGameContext {
   // GameHub `/gameapi/v1/context/init` 返回给已认证游戏客户端的最小上下文。
@@ -23,6 +24,7 @@ export interface AuthenticatedGameContext {
   cocosResource?: { assetBaseUrl?: string | null; buildId?: string | null } | null;
   walletMode?: 'SINGLE' | 'TRANSFER' | null;
   currency?: string;
+  moneyContract: GameHubMoneyDisplayContract;
   language?: string;
   platformPlayerId?: string | number | null;
   merchantPlayerId?: string | null;
@@ -64,6 +66,7 @@ export class GameContext {
   public readonly gameID = DZPK_CLIENT_GAME_ID;
   public mode: AuthenticatedGameContext['mode'] = 'TRIAL';
   public currency = 'CNY';
+  public moneyContract: GameHubMoneyDisplayContract | null = null;
   public language = 'zh-CN';
   public roomID: string | number | null = null;
   public roomLevel = 2;
@@ -102,6 +105,7 @@ export class GameContext {
   public applyAuthenticatedContext(authenticatedContext: AuthenticatedGameContext): void {
     this.mode = authenticatedContext.mode;
     this.currency = normalizeCurrencyCode(authenticatedContext.currency);
+    this.moneyContract = requireMoneyDisplayContract(authenticatedContext.moneyContract, this.currency);
     this.language = String(authenticatedContext.language ?? 'zh-CN');
     const sourceIdentity = authenticatedContext.platformPlayerId
       ?? authenticatedContext.merchantPlayerId
@@ -132,7 +136,7 @@ export class GameContext {
     this.roomConfig = roomConfiguration;
     if (this.mode !== 'TRIAL') return;
 
-    const highestMinimumEntry = Object.values(roomConfiguration).reduce(
+    const highestMinimumEntry = Object.values(roomConfiguration).reduce<number>(
       (highestMinimum, candidate) => {
         if (!candidate || typeof candidate !== 'object') return highestMinimum;
         const minimumEntry = Number((candidate as { min_gold?: unknown }).min_gold);

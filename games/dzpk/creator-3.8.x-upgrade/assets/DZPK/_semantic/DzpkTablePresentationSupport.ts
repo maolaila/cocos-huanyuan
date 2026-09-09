@@ -82,7 +82,7 @@ export function requireBinding<T>(value: T | null, bindingName: string): T {
 
 export function requireComponent<T extends Component>(
   targetNode: Node,
-  componentType: Constructor<T>,
+  componentType: new (...args: never[]) => T,
 ): T {
   // getComponent 只在目标节点本身查找，不向父子层级扩散，避免拿到同类型错误组件。
   const component = targetNode.getComponent(componentType);
