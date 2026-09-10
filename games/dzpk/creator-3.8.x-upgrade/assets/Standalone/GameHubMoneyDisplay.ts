@@ -26,22 +26,3 @@ export function gameUnitDisplay(value: unknown, contract: GameHubMoneyDisplayCon
   const result = whole + (fraction ? `.${fraction}` : '');
   return `${match[1] && /[1-9]/.test(result) ? '-' : ''}${result}`;
 }
-
-/** 精确钱包只按用户展开时刷新；不将钱包刷新覆盖正在进行的原版牌桌状态。 */
-export function installMoneyDetails(contract: GameHubMoneyDisplayContract, trial: boolean, readBalance: () => Promise<string>): void {
-  document.getElementById('gamehub-money-details')?.remove();
-  const details = document.createElement('details');
-  details.id = 'gamehub-money-details';
-  details.style.cssText = 'position:fixed;right:8px;top:8px;z-index:1000;max-width:90vw;padding:6px 10px;border-radius:5px;background:#111d;color:#fff;font:12px Arial;overflow-wrap:anywhere';
-  const summary = document.createElement('summary');
-  summary.textContent = `${trial ? '试玩 · ' : ''}${contract.currency} · 1 游戏单位 = ${contract.baseUnit} ${contract.currency}`;
-  const text = document.createElement('p');
-  details.append(summary, text);
-  details.addEventListener('toggle', async () => {
-    if (!details.open) return;
-    text.textContent = '正在读取精确余额…';
-    try { text.textContent = `实际钱包余额：${await readBalance()} ${contract.currency}。牌桌显示缩放不改变实际筹码。`; }
-    catch (error) { text.textContent = error instanceof Error ? error.message : '读取失败，请重新展开'; }
-  });
-  document.body.append(details);
-}

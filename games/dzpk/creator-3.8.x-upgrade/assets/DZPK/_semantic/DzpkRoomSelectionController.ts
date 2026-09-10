@@ -216,7 +216,7 @@ export class DzpkRoomSelectionController extends Component {
 
       const maximumCarryLabel = roomChoiceNode.getChildByName('3')?.getComponent(Label);
       if (!maximumCarryLabel || !configuration.max_gold) return;
-      if (!gameContext.moneyContract && shouldKeepOriginalMaximumCarryLabel(
+      if ((!gameContext.moneyContract || gameContext.moneyContract.baseUnit === 1) && shouldKeepOriginalMaximumCarryLabel(
         gameContext.currency,
         configuration.level,
         Number(configuration.max_gold),

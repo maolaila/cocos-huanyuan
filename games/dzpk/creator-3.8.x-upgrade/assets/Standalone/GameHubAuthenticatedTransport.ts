@@ -18,7 +18,6 @@ import { DzpkEventBus, EventSubscription } from './DzpkEventBus';
 import { SourceEnvelope, SourceProtocolAdapter } from './SourceProtocolAdapter';
 import { DzpkUiMessageService } from './DzpkUiMessageService';
 import { assertGameHubHostBuild, credentialFreeGameHubUrl, gameHubContextInitHeaders, gameHubHostedBackendOrigin } from './GameHubHostDocument';
-import { installMoneyDetails } from './GameHubMoneyDisplay';
 
 const DZPK_SESSION_RECONNECT_STORAGE_KEY = 'gamehub.dzpk.session-reconnect.v1';
 /** Local Creator/build default for the shared GameHub online-test backend. */
@@ -144,15 +143,6 @@ export class GameHubAuthenticatedTransport {
       ?? '';
     this.sessionId = authenticatedContext.sessionId;
     this.gameContext.applyAuthenticatedContext(authenticatedContext);
-    installMoneyDetails(this.gameContext.moneyContract!, this.gameContext.mode === 'TRIAL', async () => {
-      const response = await window.fetch(`${this.backendBaseUrl}/gameapi/v1/context/init`, {
-        method: 'POST', headers: gameHubContextInitHeaders(document.body), body: JSON.stringify({ sessionToken: this.sessionCredential }),
-      });
-      const result = await response.json() as ContextEnvelope;
-      if (result.code !== 0 || result.data?.sessionId !== this.sessionId || result.data?.currency !== this.gameContext.currency)
-        throw new Error(result.message ?? '钱包会话不一致');
-      return String(result.data.walletMode === 'TRANSFER' ? result.data.wallet.gameBalance : result.data.wallet.mainBalance);
-    });
     this.persistCurrentSessionReconnectState();
     const runtimeUrl = credentialFreeGameHubUrl(currentUrl, authenticatedContext, document.body);
     window.history.replaceState(window.history.state, document.title, runtimeUrl);

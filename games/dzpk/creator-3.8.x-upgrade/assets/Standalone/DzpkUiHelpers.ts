@@ -186,7 +186,7 @@ export function formatDzpkCurrencyAmount(
   currencyCode: unknown,
   options: DzpkAmountFormatOptions = {},
 ): string {
-  if (options.moneyContract) return formatAgreedGameAmount(value, options.moneyContract, options.maxCharacters ?? 8);
+  if (options.moneyContract) return formatAgreedGameAmount(value, options.moneyContract, options);
   const amount = normalizeDisplayAmount(value);
   const currency = normalizeCurrencyCode(currencyCode);
   const maxCharacters = Math.max(3, Math.floor(options.maxCharacters ?? 8));
@@ -229,15 +229,30 @@ export function formatDzpkCurrencyAmount(
   );
 }
 
-function formatAgreedGameAmount(value: unknown, contract: GameHubMoneyDisplayContract, maxCharacters: number): string {
+function formatAgreedGameAmount(value: unknown, contract: GameHubMoneyDisplayContract, options: DzpkAmountFormatOptions): string {
+  const maxCharacters = Math.max(3, Math.floor(options.maxCharacters ?? 8));
+  const currency = normalizeCurrencyCode(contract.currency);
+  const prefix = options.includeCurrencySymbol && currency === 'USD' ? '$' : '';
+  const suffix = options.includeCurrencySymbol && currency === 'VND' ? '₫' : '';
+  const units = isChineseCurrency(currency) ? CNY_COMPACT_UNITS
+    : currency === 'VND' ? VND_COMPACT_UNITS : INTERNATIONAL_COMPACT_UNITS;
   const exact = gameUnitDisplay(value, contract).replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1');
-  if (exact.length <= maxCharacters) return exact;
-  for (const [scale, suffix] of [[3, 'K'], [6, 'M'], [9, 'B'], [12, 'T']] as const) {
-    if (exact.replace(/^-/, '').split('.')[0].length <= scale) continue;
-    const scaled = gameUnitDisplay(value, contract, scale).replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1');
-    if (scaled.length + suffix.length <= maxCharacters) return `${scaled}${suffix}`;
+  if (isChineseCurrency(currency) && options.groupedWallet) {
+    const [whole, fraction] = exact.split('.');
+    const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (fraction ? `.${fraction}` : '');
+    if (grouped.length <= maxCharacters) return grouped;
   }
-  return exact; // 原 Label SHRINK，完整金额始终可以在精确钱包入口查看。
+  // Preserve the original currency's short-unit style even when raw digits fit a
+  // character budget: BMFont glyph widths and room row alignment also depend on it.
+  const digits = exact.replace(/^-/, '').split('.')[0].length;
+  const unit = units.find((candidate) => digits > Math.log10(candidate.scale));
+  if (!unit) return `${prefix}${localizeDecimalSeparator(exact, currency === 'VND' ? ',' : '.')}${suffix}`;
+  const scaled = gameUnitDisplay(value, contract, Math.log10(unit.scale));
+  const [whole, fraction = ''] = scaled.split('.');
+  const available = Math.max(0, maxCharacters - whole.length - prefix.length - suffix.length - unit.suffix.length - 1);
+  const tail = fraction.slice(0, available).replace(/0+$/, '');
+  const shortAmount = `${whole}${tail ? `.${tail}` : ''}`;
+  return `${prefix}${localizeDecimalSeparator(shortAmount, currency === 'VND' ? ',' : '.')}${unit.suffix}${suffix}`;
 }
 
 /**
@@ -291,7 +306,7 @@ export function applyDzpkAmountLabel(
     label.lineHeight = originalState.lineHeight;
   }
 
-  if (options.shrinkToFit !== false || options.moneyContract) constrainSingleLineLabel(label);
+  if (options.shrinkToFit !== false) constrainSingleLineLabel(label);
   else {
     label.overflow = originalState.overflow;
     label.enableWrapText = false;
